@@ -27,7 +27,7 @@ public class Hardware {
     public DcMotor centermotor;
     public DcMotor climbmotor;
     public DcMotor intakemotor;
-    public Servo plateServo;
+    public Servo markerServo;
     public BNO055IMU imu;
 
     public DCMotorWrapper leftmotorWrapper;
@@ -40,7 +40,7 @@ public class Hardware {
     public final String rightMotorName = "rmotor";
     public final String centerMotorName = "cmotor";
     public final String climbMotorName = "clmotor";
-    public final String plateServoName = "bservo";
+    public final String markerServoName = "bservo";
     public final String intakeMotorName = "imotor";
     public final String imuname = "gyro";
 
@@ -49,10 +49,10 @@ public class Hardware {
      */
     public Hardware (HardwareMap map) {
         leftmotor = map.dcMotor.get(leftMotorName);
-        rightmotor= map.dcMotor.get(rightMotorName);
-        centermotor=map.dcMotor.get(centerMotorName);
-        climbmotor=map.dcMotor.get(climbMotorName);
-        intakemotor=map.dcMotor.get(intakeMotorName);
+        rightmotor = map.dcMotor.get(rightMotorName);
+        centermotor = map.dcMotor.get(centerMotorName);
+        climbmotor = map.dcMotor.get(climbMotorName);
+        intakemotor = map.dcMotor.get(intakeMotorName);
 
         leftmotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightmotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -67,7 +67,8 @@ public class Hardware {
         climbmotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         intakemotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        plateServo=map.servo.get(plateServoName);
+        markerServo=map.servo.get(markerServoName);
+
         BNO055IMU.Parameters gyroParams = new BNO055IMU.Parameters();
         gyroParams.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
         gyroParams.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;

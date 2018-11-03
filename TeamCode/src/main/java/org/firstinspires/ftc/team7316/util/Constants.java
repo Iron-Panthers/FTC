@@ -46,6 +46,11 @@ public class Constants {
         return inchesToTicks(inches);
     }
 
+    //Auto constants, could be very wrong
+    public static int driveCheddarDistance = 12; //guess, distance from drop to cheddar
+    public static int cheddarRightTurn = 45; //guess, distance to turn if cheddar is to right
+    public static int cheddarLeftTurn = -45; //guess, distance to turn if cheddar is to left
+
     /**
      * @param dist inches
      */
