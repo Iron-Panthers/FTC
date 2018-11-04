@@ -4,6 +4,19 @@ import org.firstinspires.ftc.team7316.util.Alliance;
 import org.firstinspires.ftc.team7316.util.Constants;
 import org.firstinspires.ftc.team7316.util.commands.Command;
 import org.firstinspires.ftc.team7316.util.subsystems.Subsystems;
+
+//CV imports
+import ftc.vision.ImageProcess;
+import ftc.vision.ImageUtil;
+import ftc.vision.MatContour;
+import ftc.vision.SimpleFrameGrabber;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
 import org.firstinspires.ftc.team7316.util.Vec2;
 
 //Created by aaron on 11/3/18
@@ -58,28 +71,37 @@ public class CheddarToDepotSelector extends Command {
                 currentCommand.init();
             } else {
                 //look for the cheddar here
+                if (ImageProcess.canGrabFrame()) {
+                    Mat img = ImageProcess.grabFrame();
+                    //Mat resizedImage = ImageUtil.resize(img);
 
+                    ImageProcess.setSourceImage(img);
+                    ImageProcess.start();
+                    while (!ImageProcess.canGrabFrame() || !ImageProcess.canGrabContour()) { //waiting for frame, pause thread
+                    }
+                    Mat contour = ImageProcess.grabContour();
 
-                long convexHullMaxY = 10; //random shit to test logic
-                long convexHullMinY = 0;
-                long convexHullMaxX = 10;
-                long convexHullMinX = 0;
+                    long convexHullMaxY = 10; //random shit to test logic
+                    long convexHullMinY = 0;
+                    long convexHullMaxX = 10;
+                    long convexHullMinX = 0;
 
-                long avgX = (convexHullMaxX+convexHullMinX)/2;
-                long avgY = (convexHullMaxY+convexHullMinY)/2;
-                //split screen into thirds
-                long screenWidth = 176*4;
-                long screenHeight = 144*4;
+                    long avgX = (convexHullMaxX + convexHullMinX) / 2;
+                    long avgY = (convexHullMaxY + convexHullMinY) / 2;
+                    //split screen into thirds
+                    long screenWidth = 176 * 4;
+                    long screenHeight = 144 * 4;
 
-                if (avgX < (screenWidth/3)) {
-                    currentCheddarLocation = CheddarLocations.LEFT;
-                } else if (avgX > ((screenWidth/3)*2)) {
-                    currentCheddarLocation = CheddarLocations.RIGHT;
-                } else {
-                    currentCheddarLocation = CheddarLocations.CENTER;
+                    if (avgX < (screenWidth / 3)) {
+                        currentCheddarLocation = CheddarLocations.LEFT;
+                    } else if (avgX > ((screenWidth / 3) * 2)) {
+                        currentCheddarLocation = CheddarLocations.RIGHT;
+                    } else {
+                        currentCheddarLocation = CheddarLocations.CENTER;
+                    }
+
+                    foundCheddar = true;
                 }
-
-                foundCheddar = true;
             }
         } else if (commandIndex == 1) {
             if (currentCommand.shouldRemove()) {
@@ -96,6 +118,7 @@ public class CheddarToDepotSelector extends Command {
     @Override
     public boolean shouldRemove() {
         return commandIndex >= 3; //should remove? are all the commands done
+        //TODO Add timer to this so that things don't work it still returns something
     }
 
     @Override
