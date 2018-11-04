@@ -1,14 +1,13 @@
 package org.firstinspires.ftc.team7316.util.subsystems;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.Const;
+import org.firstinspires.ftc.team7316.util.Constants;
 import org.firstinspires.ftc.team7316.util.Hardware;
 import org.firstinspires.ftc.team7316.util.commands.Command;
 //Created by Aaron on 11/3/18
 
 public class MarkerSubsystem extends Subsystem {
-
-    public final double armPositionUp = 1;
-    public final double armPositionDown = 0.02;
 
     private Servo arm;
 
@@ -18,15 +17,19 @@ public class MarkerSubsystem extends Subsystem {
 
     @Override
     public void reset() {
-        moveArm(MarkerPositions.UP);
+        moveArm(MarkerPositions.INITIAL);
     }
 
     public void moveArm(MarkerPositions position) {
         if(position == MarkerPositions.UP) {
-            arm.setPosition(armPositionUp);
+            arm.setPosition(Constants.markerUpSetpoint);
         }
-        else {
-            arm.setPosition(armPositionDown);
+        else if (position == MarkerPositions.DOWN){
+            arm.setPosition(Constants.markerDownSetpoint);
+        } else if (position == MarkerPositions.HALFDOWN) {
+            arm.setPosition(Constants.markerDownSetpoint/2); //half-down for the points in auto
+        } else {
+            arm.setPosition(Constants.markerInitialSetpoint);
         }
     }
 
@@ -35,10 +38,10 @@ public class MarkerSubsystem extends Subsystem {
     public Command defaultAutoCommand() {
         return null;
     }
-    public void servoLower(){
+    public void markerDown(){
         moveArm(MarkerPositions.DOWN);
     }
-    public void servoHigher() {
+    public void markerUp() {
         moveArm(MarkerPositions.UP);
     }
 
@@ -49,6 +52,8 @@ public class MarkerSubsystem extends Subsystem {
 
     public enum MarkerPositions {
         UP,
-        DOWN
+        DOWN,
+        HALFDOWN,
+        INITIAL
     }
 }

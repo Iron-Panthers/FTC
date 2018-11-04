@@ -48,8 +48,15 @@ public class Constants {
 
     //Auto constants, could be very wrong
     public static int driveCheddarDistance = 12; //guess, distance from drop to cheddar
+    public static int depotToCraterDistance = 40; //GUESS!!!
     public static int cheddarRightTurn = 45; //guess, distance to turn if cheddar is to right
     public static int cheddarLeftTurn = -45; //guess, distance to turn if cheddar is to left
+
+    public static double markerUpSetpoint = 0.9;
+    public static double markerDownSetpoint = 0.2;
+    public static double markerInitialSetpoint = 0.6;
+
+    public static double servoMovingWaitTime = 0.7; //time to wait for servo to move
 
     /**
      * @param dist inches

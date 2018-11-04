@@ -15,7 +15,8 @@ public class ClimberSubsystem extends Subsystem {
 
     @Override
     public Command defaultAutoCommand() {
-        return new ClimbForTime(1, 5, ClimbForTime.ClimbDirections.UP);
+        return null;
+        //return new ClimbForTime(1, 5, ClimbForTime.ClimbDirections.UP);
     }
 
     @Override

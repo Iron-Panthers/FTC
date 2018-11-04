@@ -27,6 +27,11 @@ public class DriveSubsystem extends Subsystem {
         Hardware.instance.leftmotor.setPower(leftset);
         Hardware.instance.rightmotor.setPower(rightset);
     }
+    public void stopMotors() {
+        Hardware.instance.leftmotor.setPower(0);
+        Hardware.instance.rightmotor.setPower(0);
+        Hardware.instance.centermotor.setPower(0);
+    }
     public void driveWithPID(double dTime){
         Hardware.instance.rightmotorWrapper.setPowerPID(dTime);
         Hardware.instance.leftmotorWrapper.setPowerPID(dTime);
