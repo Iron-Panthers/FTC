@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.team7316.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.team7316.commands.TurnGyroSimple;
@@ -17,21 +18,11 @@ public class DriveTurnTest extends AutoBaseOpMode {
 
     @Override
     public void onInit() {
-        Scheduler.instance.add(new TurnGyroSimple(-90));
-        Hardware.instance.gyroWrapper.resetHeading(Hardware.instance.gyroWrapper.angles().yaw);
-        timer.reset();
+
     }
 
     @Override
     public void onLoop() {
-
-        GyroAngles angles = Hardware.instance.gyroWrapper.angles();
-//        Hardware.instance.gyroWrapper.resetHeading(angles.yaw);
-
-        dps += Math.abs(angles.heading) / timer.seconds();
-        timer.reset();
-        count++;
-
-        Hardware.log("dps", dps / count);
+        Hardware.instance.intakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
     }
 }

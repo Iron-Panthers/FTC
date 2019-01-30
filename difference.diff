@@ -1,0 +1,2037 @@
+[1mdiff --git a/FtcRobotController/build.gradle b/FtcRobotController/build.gradle[m
+[1mindex 13a0bb9..1aebe4a 100644[m
+[1m--- a/FtcRobotController/build.gradle[m
+[1m+++ b/FtcRobotController/build.gradle[m
+[36m@@ -7,14 +7,14 @@[m [mandroid {[m
+ [m
+     defaultConfig {[m
+         minSdkVersion 19[m
+[31m-        targetSdkVersion 19[m
+[32m+[m[32m        targetSdkVersion 27[m
+     }[m
+ [m
+[31m-    compileSdkVersion 23[m
+[32m+[m[32m    compileSdkVersion 27[m
+ [m
+     compileOptions {[m
+[31m-        sourceCompatibility JavaVersion.VERSION_1_7[m
+[31m-        targetCompatibility JavaVersion.VERSION_1_7[m
+[32m+[m[32m        sourceCompatibility JavaVersion.VERSION_1_8[m
+[32m+[m[32m        targetCompatibility JavaVersion.VERSION_1_8[m
+     }[m
+ }[m
+ [m
+[36m@@ -24,4 +24,18 @@[m [mrepositories {[m
+     }[m
+ }[m
+ [m
+[32m+[m[32mdependencies {[m
+[32m+[m[32m    implementation(project(':libuvccamera-debug')) {[m
+[32m+[m[32m        transitive = true[m
+[32m+[m[32m    }[m
+[32m+[m[32m    implementation(project(':usbCameraCommon-debug')) {[m
+[32m+[m[32m        transitive = true[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    implementation("com.serenegiant:common:${commonLibVersion}") {[m
+[32m+[m[32m        exclude module: 'support-v4'[m
+[32m+[m[32m        exclude module: 'support-annotations'[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[32m+[m
+ apply from: 'build.release.gradle'[m
+[1mdiff --git a/FtcRobotController/src/main/AndroidManifest.xml b/FtcRobotController/src/main/AndroidManifest.xml[m
+[1mindex a230902..d80902b 100644[m
+[1m--- a/FtcRobotController/src/main/AndroidManifest.xml[m
+[1m+++ b/FtcRobotController/src/main/AndroidManifest.xml[m
+[36m@@ -25,15 +25,12 @@[m
+       <intent-filter>[m
+         <category android:name="android.intent.category.LAUNCHER" />[m
+         <action android:name="android.intent.action.MAIN" />[m
+[32m+[m[32m        <!--<action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />-->[m
+       </intent-filter>[m
+ [m
+[31m-      <intent-filter>[m
+[31m-        <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />[m
+[31m-      </intent-filter>[m
+[31m-[m
+[31m-      <meta-data[m
+[31m-        android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"[m
+[31m-        android:resource="@xml/device_filter" />[m
+[32m+[m[32m      <!--<meta-data-->[m
+[32m+[m[32m        <!--android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"-->[m
+[32m+[m[32m        <!--android:resource="@xml/device_filter" />-->[m
+ [m
+       <meta-data[m
+           android:name="org.firstinspires.main.entry"[m
+[1mdiff --git a/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/BaseActivity.java b/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/BaseActivity.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..a33a049[m
+[1m--- /dev/null[m
+[1m+++ b/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/BaseActivity.java[m
+[36m@@ -0,0 +1,243 @@[m
+[32m+[m[32mpackage org.firstinspires.ftc.robotcontroller.internal;[m
+[32m+[m
+[32m+[m[32mimport android.Manifest;[m
+[32m+[m[32mimport android.annotation.SuppressLint;[m
+[32m+[m[32mimport android.app.Activity;[m
+[32m+[m[32mimport android.content.pm.PackageManager;[m
+[32m+[m[32mimport android.os.Bundle;[m
+[32m+[m[32mimport android.os.Handler;[m
+[32m+[m[32mimport android.os.Looper;[m
+[32m+[m[32mimport android.support.annotation.NonNull;[m
+[32m+[m[32mimport android.support.annotation.StringRes;[m
+[32m+[m[32mimport android.support.v7.app.AppCompatActivity;[m
+[32m+[m[32mimport android.util.Log;[m
+[32m+[m[32mimport android.widget.Toast;[m
+[32m+[m
+[32m+[m[32mimport com.serenegiant.dialog.MessageDialogFragmentV4;[m
+[32m+[m[32mimport com.serenegiant.utils.BuildCheck;[m
+[32m+[m[32mimport com.serenegiant.utils.HandlerThreadHandler;[m
+[32m+[m[32mimport com.serenegiant.utils.PermissionCheck;[m
+[32m+[m
+[32m+[m[32mpublic class BaseActivity extends Activity[m
+[32m+[m[32m        implements MessageDialogFragmentV4.MessageDialogListener {[m
+[32m+[m
+[32m+[m[32m    private static boolean DEBUG = false;	// FIXME 実働時はfalseにセットすること[m
+[32m+[m[32m    private static final String TAG = com.serenegiant.common.BaseActivity.class.getSimpleName();[m
+[32m+[m
+[32m+[m[32m    /** UI操作のためのHandler */[m
+[32m+[m[32m    private final Handler mUIHandler = new Handler(Looper.getMainLooper());[m
+[32m+[m[32m    private final Thread mUiThread = mUIHandler.getLooper().getThread();[m
+[32m+[m[32m    /** ワーカースレッド上で処理するためのHandler */[m
+[32m+[m[32m    private Handler mWorkerHandler;[m
+[32m+[m[32m    private long mWorkerThreadID = -1;[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onCreate(final Bundle savedInstanceState) {[m
+[32m+[m[32m        super.onCreate(savedInstanceState);[m
+[32m+[m[32m        // ワーカースレッドを生成[m
+[32m+[m[32m        if (mWorkerHandler == null) {[m
+[32m+[m[32m            mWorkerHandler = HandlerThreadHandler.createHandler(TAG);[m
+[32m+[m[32m            mWorkerThreadID = mWorkerHandler.getLooper().getThread().getId();[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onPause() {[m
+[32m+[m[32m        clearToast();[m
+[32m+[m[32m        super.onPause();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected synchronized void onDestroy() {[m
+[32m+[m[32m        // ワーカースレッドを破棄[m
+[32m+[m[32m        if (mWorkerHandler != null) {[m
+[32m+[m[32m            try {[m
+[32m+[m[32m                mWorkerHandler.getLooper().quit();[m
+[32m+[m[32m            } catch (final Exception e) {[m
+[32m+[m[32m                //[m
+[32m+[m[32m            }[m
+[32m+[m[32m            mWorkerHandler = null;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        super.onDestroy();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m//================================================================================[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * UIスレッドでRunnableを実行するためのヘルパーメソッド[m
+[32m+[m[32m     * @param task[m
+[32m+[m[32m     * @param duration[m
+[32m+[m[32m     */[m
+[32m+[m[32m    public final void runOnUiThread(final Runnable task, final long duration) {[m
+[32m+[m[32m        if (task == null) return;[m
+[32m+[m[32m        mUIHandler.removeCallbacks(task);[m
+[32m+[m[32m        if ((duration > 0) || Thread.currentThread() != mUiThread) {[m
+[32m+[m[32m            mUIHandler.postDelayed(task, duration);[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            try {[m
+[32m+[m[32m                task.run();[m
+[32m+[m[32m            } catch (final Exception e) {[m
+[32m+[m[32m                Log.w(TAG, e);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * UIスレッド上で指定したRunnableが実行待ちしていれば実行待ちを解除する[m
+[32m+[m[32m     * @param task[m
+[32m+[m[32m     */[m
+[32m+[m[32m    public final void removeFromUiThread(final Runnable task) {[m
+[32m+[m[32m        if (task == null) return;[m
+[32m+[m[32m        mUIHandler.removeCallbacks(task);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * ワーカースレッド上で指定したRunnableを実行する[m
+[32m+[m[32m     * 未実行の同じRunnableがあればキャンセルされる(後から指定した方のみ実行される)[m
+[32m+[m[32m     * @param task[m
+[32m+[m[32m     * @param delayMillis[m
+[32m+[m[32m     */[m
+[32m+[m[32m    protected final synchronized void queueEvent(final Runnable task, final long delayMillis) {[m
+[32m+[m[32m        if ((task == null) || (mWorkerHandler == null)) return;[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            mWorkerHandler.removeCallbacks(task);[m
+[32m+[m[32m            if (delayMillis > 0) {[m
+[32m+[m[32m                mWorkerHandler.postDelayed(task, delayMillis);[m
+[32m+[m[32m            } else if (mWorkerThreadID == Thread.currentThread().getId()) {[m
+[32m+[m[32m                task.run();[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                mWorkerHandler.post(task);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } catch (final Exception e) {[m
+[32m+[m[32m            // ignore[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * 指定したRunnableをワーカースレッド上で実行予定であればキャンセルする[m
+[32m+[m[32m     * @param task[m
+[32m+[m[32m     */[m
+[32m+[m[32m    protected final synchronized void removeEvent(final Runnable task) {[m
+[32m+[m[32m        if (task == null) return;[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            mWorkerHandler.removeCallbacks(task);[m
+[32m+[m[32m        } catch (final Exception e) {[m
+[32m+[m[32m            // ignore[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    //================================================================================[m
+[32m+[m[32m    private Toast mToast;[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Toastでメッセージを表示[m
+[32m+[m[32m     * @param msg[m
+[32m+[m[32m     */[m
+[32m+[m[32m    protected void showToast(@StringRes final int msg, final Object... args) {[m
+[32m+[m[32m        removeFromUiThread(mShowToastTask);[m
+[32m+[m[32m        mShowToastTask = new BaseActivity.ShowToastTask(msg, args);[m
+[32m+[m[32m        runOnUiThread(mShowToastTask, 0);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Toastが表示されていればキャンセルする[m
+[32m+[m[32m     */[m
+[32m+[m[32m    protected void clearToast() {[m
+[32m+[m[32m        removeFromUiThread(mShowToastTask);[m
+[32m+[m[32m        mShowToastTask = null;[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            if (mToast != null) {[m
+[32m+[m[32m                mToast.cancel();[m
+[32m+[m[32m                mToast = null;[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } catch (final Exception e) {[m
+[32m+[m[32m            // ignore[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private BaseActivity.ShowToastTask mShowToastTask;[m
+[32m+[m[32m    private final class ShowToastTask implements Runnable {[m
+[32m+[m[32m        final int msg;[m
+[32m+[m[32m        final Object args;[m
+[32m+[m[32m        private ShowToastTask(@StringRes final int msg, final Object... args) {[m
+[32m+[m[32m            this.msg = msg;[m
+[32m+[m[32m            this.args = args;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void run() {[m
+[32m+[m[32m            try {[m
+[32m+[m[32m                if (mToast != null) {[m
+[32m+[m[32m                    mToast.cancel();[m
+[32m+[m[32m                    mToast = null;[m
+[32m+[m[32m                }[m
+[32m+[m[32m                final String _msg = (args != null) ? getString(msg, args) : getString(msg);[m
+[32m+[m[32m                mToast = Toast.makeText(BaseActivity.this, _msg, Toast.LENGTH_SHORT);[m
+[32m+[m[32m                mToast.show();[m
+[32m+[m[32m            } catch (final Exception e) {[m
+[32m+[m[32m                // ignore[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m//================================================================================[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * MessageDialogFragmentメッセージダイアログからのコールバックリスナー[m
+[32m+[m[32m     * @param dialog[m
+[32m+[m[32m     * @param requestCode[m
+[32m+[m[32m     * @param permissions[m
+[32m+[m[32m     * @param result[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @SuppressLint("NewApi")[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onMessageDialogResult(final MessageDialogFragmentV4 dialog, final int requestCode, final String[] permissions, final boolean result) {[m
+[32m+[m[32m        if (result) {[m
+[32m+[m[32m            // メッセージダイアログでOKを押された時はパーミッション要求する[m
+[32m+[m[32m            if (BuildCheck.isMarshmallow()) {[m
+[32m+[m[32m                requestPermissions(permissions, requestCode);[m
+[32m+[m[32m                return;[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        // メッセージダイアログでキャンセルされた時とAndroid6でない時は自前でチェックして#checkPermissionResultを呼び出す[m
+[32m+[m[32m        for (final String permission: permissions) {[m
+[32m+[m[32m            checkPermissionResult(requestCode, permission, PermissionCheck.hasPermission(this, permission));[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * パーミッション要求結果を受け取るためのメソッド[m
+[32m+[m[32m     * @param requestCode[m
+[32m+[m[32m     * @param permissions[m
+[32m+[m[32m     * @param grantResults[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {[m
+[32m+[m[32m        super.onRequestPermissionsResult(requestCode, permissions, grantResults);	// 何もしてないけど一応呼んどく[m
+[32m+[m[32m        final int n = Math.min(permissions.length, grantResults.length);[m
+[32m+[m[32m        for (int i = 0; i < n; i++) {[m
+[32m+[m[32m            checkPermissionResult(requestCode, permissions[i], grantResults[i] == PackageManager.PERMISSION_GRANTED);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * パーミッション要求の結果をチェック[m
+[32m+[m[32m     * ここではパーミッションを取得できなかった時にToastでメッセージ表示するだけ[m
+[32m+[m[32m     * @param requestCode[m
+[32m+[m[32m     * @param permission[m
+[32m+[m[32m     * @param result[m
+[32m+[m[32m     */[m
+[32m+[m[32m    protected void checkPermissionResult(final int requestCode, final String permission, final boolean result) {[m
+[32m+[m[32m        // パーミッションがないときにはメッセージを表示する[m
+[32m+[m[32m        if (!result && (permission != null)) {[m
+[32m+[m[32m            if (Manifest.permission.RECORD_AUDIO.equals(permission)) {[m
+[32m+[m[32m                showToast(com.serenegiant.common.R.string.permission_audio);[m
+[32m+[m[32m            }[m
+[32m+[m[32m            if (Manifest.permission.WRITE_EXTERNAL_STORAGE.equals(permission)) {[m
+[32m+[m[32m                showToast(com.serenegiant.common.R.string.permission_ext_storage);[m
+[32m+[m[32m            }[m
+[32m+[m[32m            if (Manifest.permission.INTERNET.equals(permission)) {[m
+[32m+[m[32m                showToast(com.serenegiant.common.R.string.permission_network);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m}[m
+[32m+[m
+[1mdiff --git a/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java b/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java[m
+[1mindex a8c68fd..ad09cb4 100644[m
+[1m--- a/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java[m
+[1m+++ b/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java[m
+[36m@@ -50,16 +50,22 @@[m [mimport android.preference.PreferenceManager;[m
+ import android.support.annotation.NonNull;[m
+ import android.support.annotation.Nullable;[m
+ import android.support.annotation.StringRes;[m
+[32m+[m[32mimport android.util.Log;[m
+ import android.view.Menu;[m
+ import android.view.MenuItem;[m
+ import android.view.MotionEvent;[m
+[32m+[m[32mimport android.view.Surface;[m
+[32m+[m[32mimport android.view.SurfaceHolder;[m
+[32m+[m[32mimport android.view.SurfaceView;[m
+ import android.view.View;[m
+ import android.webkit.WebView;[m
+[32m+[m[32mimport android.widget.Button;[m
+ import android.widget.ImageButton;[m
+ import android.widget.LinearLayout;[m
+ import android.widget.LinearLayout.LayoutParams;[m
+ import android.widget.PopupMenu;[m
+ import android.widget.TextView;[m
+[32m+[m[32mimport android.widget.Toast;[m
+ [m
+ import com.google.blocks.ftcrobotcontroller.BlocksActivity;[m
+ import com.google.blocks.ftcrobotcontroller.ProgrammingModeActivity;[m
+[36m@@ -96,6 +102,9 @@[m [mimport com.qualcomm.robotcore.util.RobotLog;[m
+ import com.qualcomm.robotcore.wifi.NetworkConnection;[m
+ import com.qualcomm.robotcore.wifi.NetworkConnectionFactory;[m
+ import com.qualcomm.robotcore.wifi.NetworkType;[m
+[32m+[m[32mimport com.serenegiant.usb.CameraDialog;[m
+[32m+[m[32mimport com.serenegiant.usb.USBMonitor;[m
+[32m+[m[32mimport com.serenegiant.usb.UVCCamera;[m
+ [m
+ import org.firstinspires.ftc.ftccommon.external.SoundPlayingRobotMonitor;[m
+ import org.firstinspires.ftc.ftccommon.internal.FtcRobotControllerWatchdogService;[m
+[36m@@ -124,621 +133,822 @@[m [mimport java.util.Queue;[m
+ import java.util.concurrent.ConcurrentLinkedQueue;[m
+ [m
+ @SuppressWarnings("WeakerAccess")[m
+[31m-public class FtcRobotControllerActivity extends Activity[m
+[31m-  {[m
+[31m-  public static final String TAG = "RCActivity";[m
+[31m-  public String getTag() { return TAG; }[m
+[32m+[m[32mpublic class FtcRobotControllerActivity extends BaseActivity implements CameraDialog.CameraDialogParent[m
+[32m+[m[32m{[m
+[32m+[m[32m    private static final boolean DEBUG = true;	// TODO set false when production[m
+[32m+[m
+[32m+[m[32m    private final Object mSync = new Object();[m
+[32m+[m[32m    // for accessing USB and USB camera[m
+[32m+[m[32m    private USBMonitor mUSBMonitor;[m
+[32m+[m[32m    private UVCCamera mUVCCamera;[m
+[32m+[m[32m    private SurfaceView mUVCCameraView;[m
+[32m+[m[32m    // for open&start / stop&close camera preview[m
+[32m+[m[32m    private Button mCameraButton;[m
+[32m+[m[32m    private Surface mPreviewSurface;[m
+[32m+[m[32m    private boolean isActive, isPreview;[m
+[32m+[m
+[32m+[m[32m    public static final String TAG = "RCActivity";[m
+[32m+[m[32m    public String getTag() { return TAG; }[m
+[32m+[m
+[32m+[m[32m    private static final int REQUEST_CONFIG_WIFI_CHANNEL = 1;[m
+[32m+[m[32m    private static final int NUM_GAMEPADS = 2;[m
+[32m+[m
+[32m+[m[32m    protected WifiManager.WifiLock wifiLock;[m
+[32m+[m[32m    protected RobotConfigFileManager cfgFileMgr;[m
+[32m+[m
+[32m+[m[32m    protected ProgrammingWebHandlers programmingWebHandlers;[m
+[32m+[m[32m    protected ProgrammingModeController programmingModeController;[m
+[32m+[m
+[32m+[m[32m    protected UpdateUI.Callback callback;[m
+[32m+[m[32m    protected Context context;[m
+[32m+[m[32m    protected Utility utility;[m
+[32m+[m[32m    protected StartResult prefRemoterStartResult = new StartResult();[m
+[32m+[m[32m    protected StartResult deviceNameStartResult = new StartResult();[m
+[32m+[m[32m    protected PreferencesHelper preferencesHelper;[m
+[32m+[m[32m    protected final SharedPreferencesListener sharedPreferencesListener = new SharedPreferencesListener();[m
+[32m+[m
+[32m+[m[32m    protected ImageButton buttonMenu;[m
+[32m+[m[32m    protected TextView textDeviceName;[m
+[32m+[m[32m    protected TextView textNetworkConnectionStatus;[m
+[32m+[m[32m    protected TextView textRobotStatus;[m
+[32m+[m[32m    protected TextView[] textGamepad = new TextView[NUM_GAMEPADS];[m
+[32m+[m[32m    protected TextView textOpMode;[m
+[32m+[m[32m    protected TextView textErrorMessage;[m
+[32m+[m[32m    protected ImmersiveMode immersion;[m
+[32m+[m
+[32m+[m[32m    protected UpdateUI updateUI;[m
+[32m+[m[32m    protected Dimmer dimmer;[m
+[32m+[m[32m    protected LinearLayout entireScreenLayout;[m
+[32m+[m
+[32m+[m[32m    protected FtcRobotControllerService controllerService;[m
+[32m+[m[32m    protected NetworkType networkType;[m
+[32m+[m
+[32m+[m[32m    protected FtcEventLoop eventLoop;[m
+[32m+[m[32m    protected Queue<UsbDevice> receivedUsbAttachmentNotifications;[m
+[32m+[m
+[32m+[m[32m    protected WifiMuteStateMachine wifiMuteStateMachine;[m
+[32m+[m[32m    protected MotionDetection motionDetection;[m
+[32m+[m
+[32m+[m[32m    private final View.OnClickListener mOnClickListener = new View.OnClickListener() {[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onClick(final View view) {[m
+[32m+[m[32m            if (mUVCCamera == null) {[m
+[32m+[m[32m                // XXX calling CameraDialog.showDialog is necessary at only first time(only when app has no permission).[m
+[32m+[m[32m                CameraDialog.showDialog(FtcRobotControllerActivity.this);[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                synchronized (mSync) {[m
+[32m+[m[32m                    mUVCCamera.destroy();[m
+[32m+[m[32m                    mUVCCamera = null;[m
+[32m+[m[32m                    isActive = isPreview = false;[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    };[m
+[32m+[m
+[32m+[m[32m    private final USBMonitor.OnDeviceConnectListener mOnDeviceConnectListener = new USBMonitor.OnDeviceConnectListener() {[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onAttach(final UsbDevice device) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "onAttach:");[m
+[32m+[m[32m            Toast.makeText(FtcRobotControllerActivity.this, "USB_DEVICE_ATTACHED", Toast.LENGTH_SHORT).show();[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onConnect(final UsbDevice device, final USBMonitor.UsbControlBlock ctrlBlock, final boolean createNew) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "onConnect:");[m
+[32m+[m[32m            synchronized (mSync) {[m
+[32m+[m[32m                if (mUVCCamera != null) {[m
+[32m+[m[32m                    mUVCCamera.destroy();[m
+[32m+[m[32m                }[m
+[32m+[m[32m                isActive = isPreview = false;[m
+[32m+[m[32m            }[m
+[32m+[m[32m            queueEvent(new Runnable() {[m
+[32m+[m[32m                @Override[m
+[32m+[m[32m                public void run() {[m
+[32m+[m[32m                    synchronized (mSync) {[m
+[32m+[m[32m                        final UVCCamera camera = new UVCCamera();[m
+[32m+[m[32m                        camera.open(ctrlBlock);[m
+[32m+[m[32m                        if (DEBUG) Log.i(TAG, "supportedSize:" + camera.getSupportedSize());[m
+[32m+[m[32m                        try {[m
+[32m+[m[32m                            camera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.FRAME_FORMAT_MJPEG);[m
+[32m+[m[32m                        } catch (final IllegalArgumentException e) {[m
+[32m+[m[32m                            try {[m
+[32m+[m[32m                                // fallback to YUV mode[m
+[32m+[m[32m                                camera.setPreviewSize(UVCCamera.DEFAULT_PREVIEW_WIDTH, UVCCamera.DEFAULT_PREVIEW_HEIGHT, UVCCamera.DEFAULT_PREVIEW_MODE);[m
+[32m+[m[32m                            } catch (final IllegalArgumentException e1) {[m
+[32m+[m[32m                                camera.destroy();[m
+[32m+[m[32m                                return;[m
+[32m+[m[32m                            }[m
+[32m+[m[32m                        }[m
+[32m+[m[32m                        mPreviewSurface = mUVCCameraView.getHolder().getSurface();[m
+[32m+[m[32m                        if (mPreviewSurface != null) {[m
+[32m+[m[32m                            isActive = true;[m
+[32m+[m[32m                            camera.setPreviewDisplay(mPreviewSurface);[m
+[32m+[m[32m                            camera.startPreview();[m
+[32m+[m[32m                            isPreview = true;[m
+[32m+[m[32m                        }[m
+[32m+[m[32m                        synchronized (mSync) {[m
+[32m+[m[32m                            mUVCCamera = camera;[m
+[32m+[m[32m                        }[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }, 0);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onDisconnect(final UsbDevice device, final USBMonitor.UsbControlBlock ctrlBlock) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "onDisconnect:");[m
+[32m+[m[32m            // XXX you should check whether the comming device equal to camera device that currently using[m
+[32m+[m[32m            queueEvent(new Runnable() {[m
+[32m+[m[32m                @Override[m
+[32m+[m[32m                public void run() {[m
+[32m+[m[32m                    synchronized (mSync) {[m
+[32m+[m[32m                        if (mUVCCamera != null) {[m
+[32m+[m[32m                            mUVCCamera.close();[m
+[32m+[m[32m                            if (mPreviewSurface != null) {[m
+[32m+[m[32m                                mPreviewSurface.release();[m
+[32m+[m[32m                                mPreviewSurface = null;[m
+[32m+[m[32m                            }[m
+[32m+[m[32m                            isActive = isPreview = false;[m
+[32m+[m[32m                        }[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }, 0);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onDettach(final UsbDevice device) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "onDettach:");[m
+[32m+[m[32m            Toast.makeText(FtcRobotControllerActivity.this, "USB_DEVICE_DETACHED", Toast.LENGTH_SHORT).show();[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onCancel(final UsbDevice device) {[m
+[32m+[m[32m        }[m
+[32m+[m[32m    };[m
+ [m
+[31m-  private static final int REQUEST_CONFIG_WIFI_CHANNEL = 1;[m
+[31m-  private static final int NUM_GAMEPADS = 2;[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * to access from CameraDialog[m
+[32m+[m[32m     * @return[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public USBMonitor getUSBMonitor() {[m
+[32m+[m[32m        return mUSBMonitor;[m
+[32m+[m[32m    }[m
+ [m
+[31m-  protected WifiManager.WifiLock wifiLock;[m
+[31m-  protected RobotConfigFileManager cfgFileMgr;[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onDialogResult(boolean canceled) {[m
+[32m+[m[32m        if (canceled) {[m
+[32m+[m[32m            runOnUiThread(new Runnable() {[m
+[32m+[m[32m                @Override[m
+[32m+[m[32m                public void run() {[m
+[32m+[m[32m                    // FIXME[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }, 0);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+ [m
+[31m-  protected ProgrammingWebHandlers programmingWebHandlers;[m
+[31m-  protected ProgrammingModeController programmingModeController;[m
+[32m+[m[32m    private final SurfaceHolder.Callback mSurfaceViewCallback = new SurfaceHolder.Callback() {[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void surfaceCreated(final SurfaceHolder holder) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "surfaceCreated:");[m
+[32m+[m[32m        }[m
+ [m
+[31m-  protected UpdateUI.Callback callback;[m
+[31m-  protected Context context;[m
+[31m-  protected Utility utility;[m
+[31m-  protected StartResult prefRemoterStartResult = new StartResult();[m
+[31m-  protected StartResult deviceNameStartResult = new StartResult();[m
+[31m-  protected PreferencesHelper preferencesHelper;[m
+[31m-  protected final SharedPreferencesListener sharedPreferencesListener = new SharedPreferencesListener();[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void surfaceChanged(final SurfaceHolder holder, final int format, final int width, final int height) {[m
+[32m+[m[32m            if ((width == 0) || (height == 0)) return;[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "surfaceChanged:");[m
+[32m+[m[32m            mPreviewSurface = holder.getSurface();[m
+[32m+[m[32m            synchronized (mSync) {[m
+[32m+[m[32m                if (isActive && !isPreview && (mUVCCamera != null)) {[m
+[32m+[m[32m                    mUVCCamera.setPreviewDisplay(mPreviewSurface);[m
+[32m+[m[32m                    mUVCCamera.startPreview();[m
+[32m+[m[32m                    isPreview = true;[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+ [m
+[31m-  protected ImageButton buttonMenu;[m
+[31m-  protected TextView textDeviceName;[m
+[31m-  protected TextView textNetworkConnectionStatus;[m
+[31m-  protected TextView textRobotStatus;[m
+[31m-  protected TextView[] textGamepad = new TextView[NUM_GAMEPADS];[m
+[31m-  protected TextView textOpMode;[m
+[31m-  protected TextView textErrorMessage;[m
+[31m-  protected ImmersiveMode immersion;[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void surfaceDestroyed(final SurfaceHolder holder) {[m
+[32m+[m[32m            if (DEBUG) Log.v(TAG, "surfaceDestroyed:");[m
+[32m+[m[32m            synchronized (mSync) {[m
+[32m+[m[32m                if (mUVCCamera != null) {[m
+[32m+[m[32m                    mUVCCamera.stopPreview();[m
+[32m+[m[32m                }[m
+[32m+[m[32m                isPreview = false;[m
+[32m+[m[32m            }[m
+[32m+[m[32m            mPreviewSurface = null;[m
+[32m+[m[32m        }[m
+[32m+[m[32m    };[m
+ [m
+[31m-  protected UpdateUI updateUI;[m
+[31m-  protected Dimmer dimmer;[m
+[31m-  protected LinearLayout entireScreenLayout;[m
+[32m+[m[32m    protected class RobotRestarter implements Restarter {[m
+ [m
+[31m-  protected FtcRobotControllerService controllerService;[m
+[31m-  protected NetworkType networkType;[m
+[32m+[m[32m        public void requestRestart() {[m
+[32m+[m[32m            requestRobotRestart();[m
+[32m+[m[32m        }[m
+ [m
+[31m-  protected FtcEventLoop eventLoop;[m
+[31m-  protected Queue<UsbDevice> receivedUsbAttachmentNotifications;[m
+[32m+[m[32m    }[m
+ [m
+[31m-  protected WifiMuteStateMachine wifiMuteStateMachine;[m
+[31m-  protected MotionDetection motionDetection;[m
+[32m+[m[32m    protected ServiceConnection connection = new ServiceConnection() {[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onServiceConnected(ComponentName name, IBinder service) {[m
+[32m+[m[32m            FtcRobotControllerBinder binder = (FtcRobotControllerBinder) service;[m
+[32m+[m[32m            onServiceBind(binder.getService());[m
+[32m+[m[32m        }[m
+ [m
+[31m-  protected class RobotRestarter implements Restarter {[m
+[32m+[m[32m        @Override[m
+[32m+[m[32m        public void onServiceDisconnected(ComponentName name) {[m
+[32m+[m[32m            RobotLog.vv(FtcRobotControllerService.TAG, "%s.controllerService=null", TAG);[m
+[32m+[m[32m            controllerService = null;[m
+[32m+[m[32m        }[m
+[32m+[m[32m    };[m
+ [m
+[31m-    public void requestRestart() {[m
+[31m-      requestRobotRestart();[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onNewIntent(Intent intent) {[m
+[32m+[m[32m        super.onNewIntent(intent);[m
+[32m+[m
+[32m+[m[32m        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {[m
+[32m+[m[32m            UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);[m
+[32m+[m[32m            RobotLog.vv(TAG, "ACTION_USB_DEVICE_ATTACHED: %s", usbDevice.getDeviceName());[m
+[32m+[m
+[32m+[m[32m            if (usbDevice != null) {  // paranoia[m
+[32m+[m[32m                // We might get attachment notifications before the event loop is set up, so[m
+[32m+[m[32m                // we hold on to them and pass them along only when we're good and ready.[m
+[32m+[m[32m                if (receivedUsbAttachmentNotifications != null) { // *total* paranoia[m
+[32m+[m[32m                    receivedUsbAttachmentNotifications.add(usbDevice);[m
+[32m+[m[32m                    passReceivedUsbAttachmentsToEventLoop();[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+     }[m
+ [m
+[31m-  }[m
+[32m+[m[32m    protected void passReceivedUsbAttachmentsToEventLoop() {[m
+[32m+[m[32m        if (this.eventLoop != null) {[m
+[32m+[m[32m            for (;;) {[m
+[32m+[m[32m                UsbDevice usbDevice = receivedUsbAttachmentNotifications.poll();[m
+[32m+[m[32m                if (usbDevice == null)[m
+[32m+[m[32m                    break;[m
+[32m+[m[32m                this.eventLoop.onUsbDeviceAttached(usbDevice);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else {[m
+[32m+[m[32m            // Paranoia: we don't want the pending list to grow without bound when we don't[m
+[32m+[m[32m            // (yet) have an event loop[m
+[32m+[m[32m            while (receivedUsbAttachmentNotifications.size() > 100) {[m
+[32m+[m[32m                receivedUsbAttachmentNotifications.poll();[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+ [m
+[31m-  protected ServiceConnection connection = new ServiceConnection() {[m
+     @Override[m
+[31m-    public void onServiceConnected(ComponentName name, IBinder service) {[m
+[31m-      FtcRobotControllerBinder binder = (FtcRobotControllerBinder) service;[m
+[31m-      onServiceBind(binder.getService());[m
+[32m+[m[32m    protected void onCreate(Bundle savedInstanceState) {[m
+[32m+[m[32m        super.onCreate(savedInstanceState);[m
+[32m+[m[32m        RobotLog.onApplicationStart();  // robustify against onCreate() following onDestroy() but using the same app instance, which apparently does happen[m
+[32m+[m[32m        RobotLog.vv(TAG, "onCreate()");[m
+[32m+[m[32m        ThemedActivity.appAppThemeToActivity(getTag(), this); // do this way instead of inherit to help AppInventor[m
+[32m+[m
+[32m+[m[32m        // Oddly, sometimes after a crash & restart the root activity will be something unexpected, like from the before crash? We don't yet understand[m
+[32m+[m[32m        RobotLog.vv(TAG, "rootActivity is of class %s", AppUtil.getInstance().getRootActivity().getClass().getSimpleName());[m
+[32m+[m[32m        Assert.assertTrue(FtcRobotControllerWatchdogService.isFtcRobotControllerActivity(AppUtil.getInstance().getRootActivity()));[m
+[32m+[m[32m        Assert.assertTrue(AppUtil.getInstance().isRobotController());[m
+[32m+[m
+[32m+[m[32m        // Quick check: should we pretend we're not here, and so allow the Lynx to operate as[m
+[32m+[m[32m        // a stand-alone USB-connected module?[m
+[32m+[m[32m        if (LynxConstants.isRevControlHub()) {[m
+[32m+[m[32m            if (LynxConstants.disableDragonboard()) {[m
+[32m+[m[32m                // Double-sure check that the Lynx Module can operate over USB, etc, then get out of Dodge[m
+[32m+[m[32m                RobotLog.vv(TAG, "disabling Dragonboard and exiting robot controller");[m
+[32m+[m[32m                DragonboardLynxDragonboardIsPresentPin.getInstance().setState(false);[m
+[32m+[m[32m                AppUtil.getInstance().finishRootActivityAndExitApp();[m
+[32m+[m[32m            }[m
+[32m+[m[32m            else {[m
+[32m+[m[32m                // Double-sure check that we can talk to the DB over the serial TTY[m
+[32m+[m[32m                DragonboardLynxDragonboardIsPresentPin.getInstance().setState(true);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        context = this;[m
+[32m+[m[32m        utility = new Utility(this);[m
+[32m+[m
+[32m+[m[32m        DeviceNameManagerFactory.getInstance().start(deviceNameStartResult);[m
+[32m+[m
+[32m+[m[32m        PreferenceRemoterRC.getInstance().start(prefRemoterStartResult);[m
+[32m+[m
+[32m+[m[32m        receivedUsbAttachmentNotifications = new ConcurrentLinkedQueue<UsbDevice>();[m
+[32m+[m[32m        eventLoop = null;[m
+[32m+[m
+[32m+[m[32m        setContentView(R.layout.activity_ftc_controller);[m
+[32m+[m
+[32m+[m[32m        mCameraButton = findViewById(R.id.camera_button);[m
+[32m+[m[32m        mCameraButton.setOnClickListener(mOnClickListener);[m
+[32m+[m
+[32m+[m[32m        mUVCCameraView = findViewById(R.id.camera_surface_view);[m
+[32m+[m[32m        mUVCCameraView.getHolder().addCallback(mSurfaceViewCallback);[m
+[32m+[m
+[32m+[m[32m        mUSBMonitor = new USBMonitor(this, mOnDeviceConnectListener);[m
+[32m+[m
+[32m+[m[32m        preferencesHelper = new PreferencesHelper(TAG, context);[m
+[32m+[m[32m        preferencesHelper.writeBooleanPrefIfDifferent(context.getString(R.string.pref_rc_connected), true);[m
+[32m+[m[32m        preferencesHelper.getSharedPreferences().registerOnSharedPreferenceChangeListener(sharedPreferencesListener);[m
+[32m+[m
+[32m+[m[32m        entireScreenLayout = (LinearLayout) findViewById(R.id.entire_screen);[m
+[32m+[m[32m        buttonMenu = (ImageButton) findViewById(R.id.menu_buttons);[m
+[32m+[m[32m        buttonMenu.setOnClickListener(new View.OnClickListener() {[m
+[32m+[m[32m            @Override[m
+[32m+[m[32m            public void onClick(View v) {[m
+[32m+[m[32m                PopupMenu popupMenu = new PopupMenu(FtcRobotControllerActivity.this, v);[m
+[32m+[m[32m                popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {[m
+[32m+[m[32m                    @Override[m
+[32m+[m[32m                    public boolean onMenuItemClick(MenuItem item) {[m
+[32m+[m[32m                        return onOptionsItemSelected(item); // Delegate to the handler for the hardware menu button[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                });[m
+[32m+[m[32m                popupMenu.inflate(R.menu.ftc_robot_controller);[m
+[32m+[m[32m                popupMenu.show();[m
+[32m+[m[32m            }[m
+[32m+[m[32m        });[m
+[32m+[m
+[32m+[m[32m        updateMonitorLayout(getResources().getConfiguration());[m
+[32m+[m
+[32m+[m[32m        BlocksOpMode.setActivityAndWebView(this, (WebView) findViewById(R.id.webViewBlocksRuntime));[m
+[32m+[m
+[32m+[m[32m        ClassManagerFactory.registerFilters();[m
+[32m+[m[32m        ClassManagerFactory.processAllClasses();[m
+[32m+[m[32m        cfgFileMgr = new RobotConfigFileManager(this);[m
+[32m+[m
+[32m+[m[32m        // Clean up 'dirty' status after a possible crash[m
+[32m+[m[32m        RobotConfigFile configFile = cfgFileMgr.getActiveConfig();[m
+[32m+[m[32m        if (configFile.isDirty()) {[m
+[32m+[m[32m            configFile.markClean();[m
+[32m+[m[32m            cfgFileMgr.setActiveConfig(false, configFile);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        textDeviceName = (TextView) findViewById(R.id.textDeviceName);[m
+[32m+[m[32m        textNetworkConnectionStatus = (TextView) findViewById(R.id.textNetworkConnectionStatus);[m
+[32m+[m[32m        textRobotStatus = (TextView) findViewById(R.id.textRobotStatus);[m
+[32m+[m[32m        textOpMode = (TextView) findViewById(R.id.textOpMode);[m
+[32m+[m[32m        textErrorMessage = (TextView) findViewById(R.id.textErrorMessage);[m
+[32m+[m[32m        textGamepad[0] = (TextView) findViewById(R.id.textGamepad1);[m
+[32m+[m[32m        textGamepad[1] = (TextView) findViewById(R.id.textGamepad2);[m
+[32m+[m[32m        immersion = new ImmersiveMode(getWindow().getDecorView());[m
+[32m+[m[32m        dimmer = new Dimmer(this);[m
+[32m+[m[32m        dimmer.longBright();[m
+[32m+[m
+[32m+[m[32m        programmingWebHandlers = new ProgrammingWebHandlers();[m
+[32m+[m[32m        programmingModeController = new ProgrammingModeControllerImpl([m
+[32m+[m[32m                this, (TextView) findViewById(R.id.textRemoteProgrammingMode), programmingWebHandlers);[m
+[32m+[m
+[32m+[m[32m        updateUI = createUpdateUI();[m
+[32m+[m[32m        callback = createUICallback(updateUI);[m
+[32m+[m
+[32m+[m[32m        PreferenceManager.setDefaultValues(this, R.xml.app_settings, false);[m
+[32m+[m
+[32m+[m[32m        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);[m
+[32m+[m[32m        wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "");[m
+[32m+[m
+[32m+[m[32m        hittingMenuButtonBrightensScreen();[m
+[32m+[m
+[32m+[m[32m        wifiLock.acquire();[m
+[32m+[m[32m        callback.networkConnectionUpdate(NetworkConnection.NetworkEvent.DISCONNECTED);[m
+[32m+[m[32m        readNetworkType();[m
+[32m+[m[32m        ServiceController.startService(FtcRobotControllerWatchdogService.class);[m
+[32m+[m[32m        bindToService();[m
+[32m+[m[32m        logPackageVersions();[m
+[32m+[m[32m        logDeviceSerialNumber();[m
+[32m+[m[32m        RobotLog.logDeviceInfo();[m
+[32m+[m
+[32m+[m[32m        if (preferencesHelper.readBoolean(getString(R.string.pref_wifi_automute), false)) {[m
+[32m+[m[32m            initWifiMute(true);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected UpdateUI createUpdateUI() {[m
+[32m+[m[32m        Restarter restarter = new RobotRestarter();[m
+[32m+[m[32m        UpdateUI result = new UpdateUI(this, dimmer);[m
+[32m+[m[32m        result.setRestarter(restarter);[m
+[32m+[m[32m        result.setTextViews(textNetworkConnectionStatus, textRobotStatus, textGamepad, textOpMode, textErrorMessage, textDeviceName);[m
+[32m+[m[32m        return result;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected UpdateUI.Callback createUICallback(UpdateUI updateUI) {[m
+[32m+[m[32m        UpdateUI.Callback result = updateUI.new Callback();[m
+[32m+[m[32m        result.setStateMonitor(new SoundPlayingRobotMonitor());[m
+[32m+[m[32m        return result;[m
+     }[m
+ [m
+     @Override[m
+[31m-    public void onServiceDisconnected(ComponentName name) {[m
+[31m-      RobotLog.vv(FtcRobotControllerService.TAG, "%s.controllerService=null", TAG);[m
+[31m-      controllerService = null;[m
+[31m-    }[m
+[31m-  };[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onNewIntent(Intent intent) {[m
+[31m-    super.onNewIntent(intent);[m
+[31m-[m
+[31m-    if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {[m
+[31m-      UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);[m
+[31m-      RobotLog.vv(TAG, "ACTION_USB_DEVICE_ATTACHED: %s", usbDevice.getDeviceName());[m
+[31m-[m
+[31m-      if (usbDevice != null) {  // paranoia[m
+[31m-        // We might get attachment notifications before the event loop is set up, so[m
+[31m-        // we hold on to them and pass them along only when we're good and ready.[m
+[31m-        if (receivedUsbAttachmentNotifications != null) { // *total* paranoia[m
+[31m-          receivedUsbAttachmentNotifications.add(usbDevice);[m
+[31m-          passReceivedUsbAttachmentsToEventLoop();[m
+[31m-        }[m
+[31m-      }[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void passReceivedUsbAttachmentsToEventLoop() {[m
+[31m-    if (this.eventLoop != null) {[m
+[31m-      for (;;) {[m
+[31m-        UsbDevice usbDevice = receivedUsbAttachmentNotifications.poll();[m
+[31m-        if (usbDevice == null)[m
+[31m-          break;[m
+[31m-        this.eventLoop.onUsbDeviceAttached(usbDevice);[m
+[31m-      }[m
+[31m-    }[m
+[31m-    else {[m
+[31m-      // Paranoia: we don't want the pending list to grow without bound when we don't[m
+[31m-      // (yet) have an event loop[m
+[31m-      while (receivedUsbAttachmentNotifications.size() > 100) {[m
+[31m-        receivedUsbAttachmentNotifications.poll();[m
+[31m-      }[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onCreate(Bundle savedInstanceState) {[m
+[31m-    super.onCreate(savedInstanceState);[m
+[31m-    RobotLog.onApplicationStart();  // robustify against onCreate() following onDestroy() but using the same app instance, which apparently does happen[m
+[31m-    RobotLog.vv(TAG, "onCreate()");[m
+[31m-    ThemedActivity.appAppThemeToActivity(getTag(), this); // do this way instead of inherit to help AppInventor[m
+[31m-[m
+[31m-    // Oddly, sometimes after a crash & restart the root activity will be something unexpected, like from the before crash? We don't yet understand[m
+[31m-    RobotLog.vv(TAG, "rootActivity is of class %s", AppUtil.getInstance().getRootActivity().getClass().getSimpleName());[m
+[31m-    Assert.assertTrue(FtcRobotControllerWatchdogService.isFtcRobotControllerActivity(AppUtil.getInstance().getRootActivity()));[m
+[31m-    Assert.assertTrue(AppUtil.getInstance().isRobotController());[m
+[31m-[m
+[31m-    // Quick check: should we pretend we're not here, and so allow the Lynx to operate as[m
+[31m-    // a stand-alone USB-connected module?[m
+[31m-    if (LynxConstants.isRevControlHub()) {[m
+[31m-      if (LynxConstants.disableDragonboard()) {[m
+[31m-        // Double-sure check that the Lynx Module can operate over USB, etc, then get out of Dodge[m
+[31m-        RobotLog.vv(TAG, "disabling Dragonboard and exiting robot controller");[m
+[31m-        DragonboardLynxDragonboardIsPresentPin.getInstance().setState(false);[m
+[31m-        AppUtil.getInstance().finishRootActivityAndExitApp();[m
+[31m-        }[m
+[31m-      else {[m
+[31m-        // Double-sure check that we can talk to the DB over the serial TTY[m
+[31m-        DragonboardLynxDragonboardIsPresentPin.getInstance().setState(true);[m
+[31m-      }[m
+[31m-    }[m
+[31m-[m
+[31m-    context = this;[m
+[31m-    utility = new Utility(this);[m
+[31m-[m
+[31m-    DeviceNameManagerFactory.getInstance().start(deviceNameStartResult);[m
+[31m-[m
+[31m-    PreferenceRemoterRC.getInstance().start(prefRemoterStartResult);[m
+[31m-[m
+[31m-    receivedUsbAttachmentNotifications = new ConcurrentLinkedQueue<UsbDevice>();[m
+[31m-    eventLoop = null;[m
+[31m-[m
+[31m-    setContentView(R.layout.activity_ftc_controller);[m
+[31m-[m
+[31m-    preferencesHelper = new PreferencesHelper(TAG, context);[m
+[31m-    preferencesHelper.writeBooleanPrefIfDifferent(context.getString(R.string.pref_rc_connected), true);[m
+[31m-    preferencesHelper.getSharedPreferences().registerOnSharedPreferenceChangeListener(sharedPreferencesListener);[m
+[31m-[m
+[31m-    entireScreenLayout = (LinearLayout) findViewById(R.id.entire_screen);[m
+[31m-    buttonMenu = (ImageButton) findViewById(R.id.menu_buttons);[m
+[31m-    buttonMenu.setOnClickListener(new View.OnClickListener() {[m
+[31m-      @Override[m
+[31m-      public void onClick(View v) {[m
+[31m-        PopupMenu popupMenu = new PopupMenu(FtcRobotControllerActivity.this, v);[m
+[31m-        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {[m
+[31m-          @Override[m
+[31m-          public boolean onMenuItemClick(MenuItem item) {[m
+[31m-            return onOptionsItemSelected(item); // Delegate to the handler for the hardware menu button[m
+[31m-          }[m
+[32m+[m[32m    protected void onStart() {[m
+[32m+[m[32m        super.onStart();[m
+[32m+[m[32m        RobotLog.vv(TAG, "onStart()");[m
+[32m+[m
+[32m+[m[32m        if (DEBUG) Log.v(TAG, "onStart:");[m
+[32m+[m[32m        synchronized (mSync) {[m
+[32m+[m[32m            if (mUSBMonitor != null) {[m
+[32m+[m[32m                mUSBMonitor.register();[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        // If we're start()ing after a stop(), then shut the old robot down so[m
+[32m+[m[32m        // we can refresh it with new state (e.g., with new hw configurations)[m
+[32m+[m[32m        shutdownRobot();[m
+[32m+[m
+[32m+[m[32m        updateUIAndRequestRobotSetup();[m
+[32m+[m
+[32m+[m[32m        cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[32m+[m
+[32m+[m[32m        entireScreenLayout.setOnTouchListener(new View.OnTouchListener() {[m
+[32m+[m[32m            @Override[m
+[32m+[m[32m            public boolean onTouch(View v, MotionEvent event) {[m
+[32m+[m[32m                dimmer.handleDimTimer();[m
+[32m+[m[32m                return false;[m
+[32m+[m[32m            }[m
+         });[m
+[31m-        popupMenu.inflate(R.menu.ftc_robot_controller);[m
+[31m-        popupMenu.show();[m
+[31m-      }[m
+[31m-    });[m
+[31m-[m
+[31m-    updateMonitorLayout(getResources().getConfiguration());[m
+[31m-[m
+[31m-    BlocksOpMode.setActivityAndWebView(this, (WebView) findViewById(R.id.webViewBlocksRuntime));[m
+[31m-[m
+[31m-    ClassManagerFactory.registerFilters();[m
+[31m-    ClassManagerFactory.processAllClasses();[m
+[31m-    cfgFileMgr = new RobotConfigFileManager(this);[m
+[31m-[m
+[31m-    // Clean up 'dirty' status after a possible crash[m
+[31m-    RobotConfigFile configFile = cfgFileMgr.getActiveConfig();[m
+[31m-    if (configFile.isDirty()) {[m
+[31m-      configFile.markClean();[m
+[31m-      cfgFileMgr.setActiveConfig(false, configFile);[m
+[31m-    }[m
+[31m-[m
+[31m-    textDeviceName = (TextView) findViewById(R.id.textDeviceName);[m
+[31m-    textNetworkConnectionStatus = (TextView) findViewById(R.id.textNetworkConnectionStatus);[m
+[31m-    textRobotStatus = (TextView) findViewById(R.id.textRobotStatus);[m
+[31m-    textOpMode = (TextView) findViewById(R.id.textOpMode);[m
+[31m-    textErrorMessage = (TextView) findViewById(R.id.textErrorMessage);[m
+[31m-    textGamepad[0] = (TextView) findViewById(R.id.textGamepad1);[m
+[31m-    textGamepad[1] = (TextView) findViewById(R.id.textGamepad2);[m
+[31m-    immersion = new ImmersiveMode(getWindow().getDecorView());[m
+[31m-    dimmer = new Dimmer(this);[m
+[31m-    dimmer.longBright();[m
+[31m-[m
+[31m-    programmingWebHandlers = new ProgrammingWebHandlers();[m
+[31m-    programmingModeController = new ProgrammingModeControllerImpl([m
+[31m-            this, (TextView) findViewById(R.id.textRemoteProgrammingMode), programmingWebHandlers);[m
+[31m-[m
+[31m-    updateUI = createUpdateUI();[m
+[31m-    callback = createUICallback(updateUI);[m
+[31m-[m
+[31m-    PreferenceManager.setDefaultValues(this, R.xml.app_settings, false);[m
+[31m-[m
+[31m-    WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);[m
+[31m-    wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "");[m
+[31m-[m
+[31m-    hittingMenuButtonBrightensScreen();[m
+[31m-[m
+[31m-    wifiLock.acquire();[m
+[31m-    callback.networkConnectionUpdate(NetworkConnection.NetworkEvent.DISCONNECTED);[m
+[31m-    readNetworkType();[m
+[31m-    ServiceController.startService(FtcRobotControllerWatchdogService.class);[m
+[31m-    bindToService();[m
+[31m-    logPackageVersions();[m
+[31m-    logDeviceSerialNumber();[m
+[31m-    RobotLog.logDeviceInfo();[m
+[31m-[m
+[31m-    if (preferencesHelper.readBoolean(getString(R.string.pref_wifi_automute), false)) {[m
+[31m-      initWifiMute(true);[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  protected UpdateUI createUpdateUI() {[m
+[31m-    Restarter restarter = new RobotRestarter();[m
+[31m-    UpdateUI result = new UpdateUI(this, dimmer);[m
+[31m-    result.setRestarter(restarter);[m
+[31m-    result.setTextViews(textNetworkConnectionStatus, textRobotStatus, textGamepad, textOpMode, textErrorMessage, textDeviceName);[m
+[31m-    return result;[m
+[31m-  }[m
+[31m-[m
+[31m-  protected UpdateUI.Callback createUICallback(UpdateUI updateUI) {[m
+[31m-    UpdateUI.Callback result = updateUI.new Callback();[m
+[31m-    result.setStateMonitor(new SoundPlayingRobotMonitor());[m
+[31m-    return result;[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onStart() {[m
+[31m-    super.onStart();[m
+[31m-    RobotLog.vv(TAG, "onStart()");[m
+[31m-[m
+[31m-    // If we're start()ing after a stop(), then shut the old robot down so[m
+[31m-    // we can refresh it with new state (e.g., with new hw configurations)[m
+[31m-    shutdownRobot();[m
+[31m-[m
+[31m-    updateUIAndRequestRobotSetup();[m
+[31m-[m
+[31m-    cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[31m-[m
+[31m-    entireScreenLayout.setOnTouchListener(new View.OnTouchListener() {[m
+[31m-      @Override[m
+[31m-      public boolean onTouch(View v, MotionEvent event) {[m
+[31m-        dimmer.handleDimTimer();[m
+[31m-        return false;[m
+[31m-      }[m
+[31m-    });[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onResume() {[m
+[31m-    super.onResume();[m
+[31m-    RobotLog.vv(TAG, "onResume()");[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onPause() {[m
+[31m-    super.onPause();[m
+[31m-    RobotLog.vv(TAG, "onPause()");[m
+[31m-    if (programmingModeController.isActive()) {[m
+[31m-      programmingModeController.stopProgrammingMode();[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onStop() {[m
+[31m-    // Note: this gets called even when the configuration editor is launched. That is, it gets[m
+[31m-    // called surprisingly often. So, we don't actually do much here.[m
+[31m-    super.onStop();[m
+[31m-    RobotLog.vv(TAG, "onStop()");[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onDestroy() {[m
+[31m-    super.onDestroy();[m
+[31m-    RobotLog.vv(TAG, "onDestroy()");[m
+[31m-[m
+[31m-    shutdownRobot();  // Ensure the robot is put away to bed[m
+[31m-    if (callback != null) callback.close();[m
+[31m-[m
+[31m-    PreferenceRemoterRC.getInstance().stop(prefRemoterStartResult);[m
+[31m-    DeviceNameManagerFactory.getInstance().stop(deviceNameStartResult);[m
+[31m-[m
+[31m-    unbindFromService();[m
+[31m-    // If the app manually (?) is stopped, then we don't need the auto-starting function (?)[m
+[31m-    ServiceController.stopService(FtcRobotControllerWatchdogService.class);[m
+[31m-    wifiLock.release();[m
+[31m-[m
+[31m-    preferencesHelper.getSharedPreferences().unregisterOnSharedPreferenceChangeListener(sharedPreferencesListener);[m
+[31m-    RobotLog.cancelWriteLogcatToDisk();[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void bindToService() {[m
+[31m-    readNetworkType();[m
+[31m-    Intent intent = new Intent(this, FtcRobotControllerService.class);[m
+[31m-    intent.putExtra(NetworkConnectionFactory.NETWORK_CONNECTION_TYPE, networkType);[m
+[31m-    bindService(intent, connection, Context.BIND_AUTO_CREATE);[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void unbindFromService() {[m
+[31m-    if (controllerService != null) {[m
+[31m-      unbindService(connection);[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void logPackageVersions() {[m
+[31m-    RobotLog.logBuildConfig(com.qualcomm.ftcrobotcontroller.BuildConfig.class);[m
+[31m-    RobotLog.logBuildConfig(com.qualcomm.robotcore.BuildConfig.class);[m
+[31m-    RobotLog.logBuildConfig(com.qualcomm.hardware.BuildConfig.class);[m
+[31m-    RobotLog.logBuildConfig(com.qualcomm.ftccommon.BuildConfig.class);[m
+[31m-    RobotLog.logBuildConfig(com.google.blocks.BuildConfig.class);[m
+[31m-    RobotLog.logBuildConfig(org.firstinspires.inspection.BuildConfig.class);[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void logDeviceSerialNumber() {[m
+[31m-    RobotLog.ii(TAG, "410c serial number: " + Build.SERIAL);[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void readNetworkType() {[m
+[31m-[m
+[31m-    // The code here used to defer to the value found in a configuration file[m
+[31m-    // to configure the network type. If the file was absent, then it initialized[m
+[31m-    // it with a default.[m
+[31m-    //[m
+[31m-    // However, bugs have been reported with that approach (empty config files, specifically).[m
+[31m-    // Moreover, the non-Wifi-Direct networking is end-of-life, so the simplest and most robust[m
+[31m-    // (e.g.: no one can screw things up by messing with the contents of the config file) fix is[m
+[31m-    // to do away with configuration file entirely.[m
+[31m-    //[m
+[31m-    // Control hubs are always running the access point model.  Everything else, for the time[m
+[31m-    // being always runs the wifi direct model.[m
+[31m-    if (Device.isRevControlHub() == true) {[m
+[31m-      networkType = NetworkType.RCWIRELESSAP;[m
+[31m-    } else {[m
+[31m-      networkType = NetworkType.fromString(preferencesHelper.readString(context.getString(R.string.pref_pairing_kind), NetworkType.globalDefaultAsString()));[m
+[31m-    }[m
+[31m-[m
+[31m-    // update the app_settings[m
+[31m-    preferencesHelper.writeStringPrefIfDifferent(context.getString(R.string.pref_pairing_kind), networkType.toString());[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  public void onWindowFocusChanged(boolean hasFocus){[m
+[31m-    super.onWindowFocusChanged(hasFocus);[m
+[31m-    // When the window loses focus (e.g., the action overflow is shown),[m
+[31m-    // cancel any pending hide action. When the window gains focus,[m
+[31m-    // hide the system UI.[m
+[31m-    if (hasFocus) {[m
+[31m-      if (ImmersiveMode.apiOver19()){[m
+[31m-        // Immersive flag only works on API 19 and above.[m
+[31m-        immersion.hideSystemUI();[m
+[31m-      }[m
+[31m-    } else {[m
+[31m-      immersion.cancelSystemUIHide();[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-[m
+[31m-  @Override[m
+[31m-  public boolean onCreateOptionsMenu(Menu menu) {[m
+[31m-    getMenuInflater().inflate(R.menu.ftc_robot_controller, menu);[m
+[31m-    return true;[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  public boolean onOptionsItemSelected(MenuItem item) {[m
+[31m-    int id = item.getItemId();[m
+[31m-[m
+[31m-    if (id == R.id.action_programming_mode) {[m
+[31m-      if (cfgFileMgr.getActiveConfig().isNoConfig()) {[m
+[31m-        // Tell the user they must configure the robot before starting programming mode.[m
+[31m-        // TODO: as we are no longer truly 'modal' this warning should be adapted[m
+[31m-        AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastConfigureRobotBeforeProgrammingMode));[m
+[31m-      } else {[m
+[31m-        Intent programmingModeIntent = new Intent(AppUtil.getDefContext(), ProgrammingModeActivity.class);[m
+[31m-        programmingModeIntent.putExtra([m
+[31m-            LaunchActivityConstantsList.PROGRAMMING_MODE_ACTIVITY_PROGRAMMING_WEB_HANDLERS,[m
+[31m-            new LocalByRefIntentExtraHolder(programmingWebHandlers));[m
+[31m-        startActivity(programmingModeIntent);[m
+[31m-      }[m
+[31m-      return true;[m
+[31m-    } else if (id == R.id.action_program_and_manage) {[m
+[31m-      Intent programmingModeIntent = new Intent(AppUtil.getDefContext(), ProgramAndManageActivity.class);[m
+[31m-      RobotControllerWebInfo webInfo = programmingWebHandlers.getWebServer().getConnectionInformation();[m
+[31m-      programmingModeIntent.putExtra(LaunchActivityConstantsList.RC_WEB_INFO, webInfo.toJson());[m
+[31m-      startActivity(programmingModeIntent);[m
+[31m-    } else if (id == R.id.action_inspection_mode) {[m
+[31m-      Intent inspectionModeIntent = new Intent(AppUtil.getDefContext(), RcInspectionActivity.class);[m
+[31m-      startActivity(inspectionModeIntent);[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_blocks) {[m
+[31m-      Intent blocksIntent = new Intent(AppUtil.getDefContext(), BlocksActivity.class);[m
+[31m-      startActivity(blocksIntent);[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_restart_robot) {[m
+[31m-      dimmer.handleDimTimer();[m
+[31m-      AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastRestartingRobot));[m
+[31m-      requestRobotRestart();[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_configure_robot) {[m
+[31m-      EditParameters parameters = new EditParameters();[m
+[31m-      Intent intentConfigure = new Intent(AppUtil.getDefContext(), FtcLoadFileActivity.class);[m
+[31m-      parameters.putIntent(intentConfigure);[m
+[31m-      startActivityForResult(intentConfigure, RequestCode.CONFIGURE_ROBOT_CONTROLLER.ordinal());[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_settings) {[m
+[31m-	  // historical: this once erroneously used FTC_CONFIGURE_REQUEST_CODE_ROBOT_CONTROLLER[m
+[31m-      Intent settingsIntent = new Intent(AppUtil.getDefContext(), FtcRobotControllerSettingsActivity.class);[m
+[31m-      startActivityForResult(settingsIntent, RequestCode.SETTINGS_ROBOT_CONTROLLER.ordinal());[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_about) {[m
+[31m-      Intent intent = new Intent(AppUtil.getDefContext(), FtcAboutActivity.class);[m
+[31m-      startActivity(intent);[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-    else if (id == R.id.action_exit_app) {[m
+[31m-      finish();[m
+[31m-      return true;[m
+[31m-    }[m
+[31m-[m
+[31m-   return super.onOptionsItemSelected(item);[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  public void onConfigurationChanged(Configuration newConfig) {[m
+[31m-    super.onConfigurationChanged(newConfig);[m
+[31m-    // don't destroy assets on screen rotation[m
+[31m-    updateMonitorLayout(newConfig);[m
+[31m-  }[m
+[31m-[m
+[31m-  /**[m
+[31m-   * Updates the orientation of monitorContainer (which contains cameraMonitorView and[m
+[31m-   * tfodMonitorView) based on the given configuration. Makes the children split the space.[m
+[31m-   */[m
+[31m-  private void updateMonitorLayout(Configuration configuration) {[m
+[31m-    LinearLayout monitorContainer = (LinearLayout) findViewById(R.id.monitorContainer);[m
+[31m-    if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {[m
+[31m-      // When the phone is landscape, lay out the monitor views horizontally.[m
+[31m-      monitorContainer.setOrientation(LinearLayout.HORIZONTAL);[m
+[31m-      for (int i = 0; i < monitorContainer.getChildCount(); i++) {[m
+[31m-        View view = monitorContainer.getChildAt(i);[m
+[31m-        view.setLayoutParams(new LayoutParams(0, LayoutParams.MATCH_PARENT, 1 /* weight */));[m
+[31m-      }[m
+[31m-    } else {[m
+[31m-      // When the phone is portrait, lay out the monitor views vertically.[m
+[31m-      monitorContainer.setOrientation(LinearLayout.VERTICAL);[m
+[31m-      for (int i = 0; i < monitorContainer.getChildCount(); i++) {[m
+[31m-        View view = monitorContainer.getChildAt(i);[m
+[31m-        view.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1 /* weight */));[m
+[31m-      }[m
+[31m-    }[m
+[31m-    monitorContainer.requestLayout();[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  protected void onActivityResult(int request, int result, Intent intent) {[m
+[31m-    if (request == REQUEST_CONFIG_WIFI_CHANNEL) {[m
+[31m-      if (result == RESULT_OK) {[m
+[31m-        AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastWifiConfigurationComplete));[m
+[31m-      }[m
+[31m-    }[m
+[31m-    // was some historical confusion about launch codes here, so we err safely[m
+[31m-    if (request == RequestCode.CONFIGURE_ROBOT_CONTROLLER.ordinal() || request == RequestCode.SETTINGS_ROBOT_CONTROLLER.ordinal()) {[m
+[31m-      // We always do a refresh, whether it was a cancel or an OK, for robustness[m
+[31m-      cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  public void onServiceBind(final FtcRobotControllerService service) {[m
+[31m-    RobotLog.vv(FtcRobotControllerService.TAG, "%s.controllerService=bound", TAG);[m
+[31m-    controllerService = service;[m
+[31m-    updateUI.setControllerService(controllerService);[m
+[31m-[m
+[31m-    updateUIAndRequestRobotSetup();[m
+[31m-    programmingWebHandlers.setState(new FtcRobotControllerServiceState() {[m
+[31m-      @NonNull[m
+[31m-      @Override[m
+[31m-      public WebServer getWebServer() {[m
+[31m-        return service.getWebServer();[m
+[31m-      }[m
+[31m-[m
+[31m-      @Override[m
+[31m-      public EventLoopManager getEventLoopManager() {[m
+[31m-        return service.getRobot().eventLoopManager;[m
+[31m-      }[m
+[31m-    });[m
+[31m-  }[m
+[31m-[m
+[31m-  private void updateUIAndRequestRobotSetup() {[m
+[31m-    if (controllerService != null) {[m
+[31m-      callback.networkConnectionUpdate(controllerService.getNetworkConnectionStatus());[m
+[31m-      callback.updateRobotStatus(controllerService.getRobotStatus());[m
+[31m-      // Only show this first-time toast on headless systems: what we have now on non-headless suffices[m
+[31m-      requestRobotSetup(LynxConstants.isRevControlHub()[m
+[31m-        ? new Runnable() {[m
+[31m-            @Override public void run() {[m
+[31m-              showRestartRobotCompleteToast(R.string.toastRobotSetupComplete);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onResume() {[m
+[32m+[m[32m        super.onResume();[m
+[32m+[m[32m        RobotLog.vv(TAG, "onResume()");[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onPause() {[m
+[32m+[m[32m        super.onPause();[m
+[32m+[m[32m        RobotLog.vv(TAG, "onPause()");[m
+[32m+[m[32m        if (programmingModeController.isActive()) {[m
+[32m+[m[32m            programmingModeController.stopProgrammingMode();[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onStop() {[m
+[32m+[m[32m        // Note: this gets called even when the configuration editor is launched. That is, it gets[m
+[32m+[m[32m        // called surprisingly often. So, we don't actually do much here.[m
+[32m+[m
+[32m+[m[32m        if (DEBUG) Log.v(TAG, "onStop:");[m
+[32m+[m[32m        synchronized (mSync) {[m
+[32m+[m[32m            if (mUSBMonitor != null) {[m
+[32m+[m[32m                mUSBMonitor.unregister();[m
+             }[m
+[31m-          }[m
+[31m-        : null);[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  private void requestRobotSetup(@Nullable Runnable runOnComplete) {[m
+[31m-    if (controllerService == null) return;[m
+[31m-[m
+[31m-    RobotConfigFile file = cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[31m-    HardwareFactory hardwareFactory = new HardwareFactory(context);[m
+[31m-    try {[m
+[31m-      hardwareFactory.setXmlPullParser(file.getXml());[m
+[31m-    } catch (Resources.NotFoundException e) {[m
+[31m-      file = RobotConfigFile.noConfig(cfgFileMgr);[m
+[31m-      hardwareFactory.setXmlPullParser(file.getXml());[m
+[31m-      cfgFileMgr.setActiveConfigAndUpdateUI(false, file);[m
+[31m-    }[m
+[31m-[m
+[31m-    OpModeRegister userOpModeRegister = createOpModeRegister();[m
+[31m-    eventLoop = new FtcEventLoop(hardwareFactory, userOpModeRegister, callback, this, programmingModeController);[m
+[31m-    FtcEventLoopIdle idleLoop = new FtcEventLoopIdle(hardwareFactory, userOpModeRegister, callback, this, programmingModeController);[m
+[31m-[m
+[31m-    controllerService.setCallback(callback);[m
+[31m-    controllerService.setupRobot(eventLoop, idleLoop, runOnComplete);[m
+[31m-[m
+[31m-    passReceivedUsbAttachmentsToEventLoop();[m
+[31m-  }[m
+[31m-[m
+[31m-  protected OpModeRegister createOpModeRegister() {[m
+[31m-    return new FtcOpModeRegister();[m
+[31m-  }[m
+[31m-[m
+[31m-  private void shutdownRobot() {[m
+[31m-    if (controllerService != null) controllerService.shutdownRobot();[m
+[31m-  }[m
+[31m-[m
+[31m-  private void requestRobotRestart() {[m
+[31m-    AppUtil.getInstance().showToast(UILocation.BOTH, AppUtil.getDefContext().getString(R.string.toastRestartingRobot));[m
+[31m-    //[m
+[31m-    RobotLog.clearGlobalErrorMsg();[m
+[31m-    RobotLog.clearGlobalWarningMsg();[m
+[31m-    shutdownRobot();[m
+[31m-    requestRobotSetup(new Runnable() {[m
+[31m-      @Override public void run() {[m
+[31m-        showRestartRobotCompleteToast(R.string.toastRestartRobotComplete);[m
+[31m-        }[m
+[31m-      });[m
+[31m-  }[m
+[31m-[m
+[31m-  private void showRestartRobotCompleteToast(@StringRes int resid) {[m
+[31m-    AppUtil.getInstance().showToast(UILocation.BOTH, AppUtil.getDefContext().getString(resid));[m
+[31m-  }[m
+[31m-[m
+[31m-  protected void hittingMenuButtonBrightensScreen() {[m
+[31m-    ActionBar actionBar = getActionBar();[m
+[31m-    if (actionBar != null) {[m
+[31m-      actionBar.addOnMenuVisibilityListener(new ActionBar.OnMenuVisibilityListener() {[m
+[31m-        @Override[m
+[31m-        public void onMenuVisibilityChanged(boolean isVisible) {[m
+[31m-          if (isVisible) {[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        super.onStop();[m
+[32m+[m[32m        RobotLog.vv(TAG, "onStop()");[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onDestroy() {[m
+[32m+[m[32m        if (DEBUG) Log.v(TAG, "onDestroy:");[m
+[32m+[m[32m        synchronized (mSync) {[m
+[32m+[m[32m            isActive = isPreview = false;[m
+[32m+[m[32m            if (mUVCCamera != null) {[m
+[32m+[m[32m                mUVCCamera.destroy();[m
+[32m+[m[32m                mUVCCamera = null;[m
+[32m+[m[32m            }[m
+[32m+[m[32m            if (mUSBMonitor != null) {[m
+[32m+[m[32m                mUSBMonitor.destroy();[m
+[32m+[m[32m                mUSBMonitor = null;[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        mUVCCameraView = null;[m
+[32m+[m[32m        mCameraButton = null;[m
+[32m+[m
+[32m+[m[32m        super.onDestroy();[m
+[32m+[m[32m        RobotLog.vv(TAG, "onDestroy()");[m
+[32m+[m
+[32m+[m[32m        shutdownRobot();  // Ensure the robot is put away to bed[m
+[32m+[m[32m        if (callback != null) callback.close();[m
+[32m+[m
+[32m+[m[32m        PreferenceRemoterRC.getInstance().stop(prefRemoterStartResult);[m
+[32m+[m[32m        DeviceNameManagerFactory.getInstance().stop(deviceNameStartResult);[m
+[32m+[m
+[32m+[m[32m        unbindFromService();[m
+[32m+[m[32m        // If the app manually (?) is stopped, then we don't need the auto-starting function (?)[m
+[32m+[m[32m        ServiceController.stopService(FtcRobotControllerWatchdogService.class);[m
+[32m+[m[32m        wifiLock.release();[m
+[32m+[m
+[32m+[m[32m        preferencesHelper.getSharedPreferences().unregisterOnSharedPreferenceChangeListener(sharedPreferencesListener);[m
+[32m+[m[32m        RobotLog.cancelWriteLogcatToDisk();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void bindToService() {[m
+[32m+[m[32m        readNetworkType();[m
+[32m+[m[32m        Intent intent = new Intent(this, FtcRobotControllerService.class);[m
+[32m+[m[32m        intent.putExtra(NetworkConnectionFactory.NETWORK_CONNECTION_TYPE, networkType);[m
+[32m+[m[32m        bindService(intent, connection, Context.BIND_AUTO_CREATE);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void unbindFromService() {[m
+[32m+[m[32m        if (controllerService != null) {[m
+[32m+[m[32m            unbindService(connection);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void logPackageVersions() {[m
+[32m+[m[32m        RobotLog.logBuildConfig(com.qualcomm.ftcrobotcontroller.BuildConfig.class);[m
+[32m+[m[32m        RobotLog.logBuildConfig(com.qualcomm.robotcore.BuildConfig.class);[m
+[32m+[m[32m        RobotLog.logBuildConfig(com.qualcomm.hardware.BuildConfig.class);[m
+[32m+[m[32m        RobotLog.logBuildConfig(com.qualcomm.ftccommon.BuildConfig.class);[m
+[32m+[m[32m        RobotLog.logBuildConfig(com.google.blocks.BuildConfig.class);[m
+[32m+[m[32m        RobotLog.logBuildConfig(org.firstinspires.inspection.BuildConfig.class);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void logDeviceSerialNumber() {[m
+[32m+[m[32m        RobotLog.ii(TAG, "410c serial number: " + Build.SERIAL);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void readNetworkType() {[m
+[32m+[m
+[32m+[m[32m        // The code here used to defer to the value found in a configuration file[m
+[32m+[m[32m        // to configure the network type. If the file was absent, then it initialized[m
+[32m+[m[32m        // it with a default.[m
+[32m+[m[32m        //[m
+[32m+[m[32m        // However, bugs have been reported with that approach (empty config files, specifically).[m
+[32m+[m[32m        // Moreover, the non-Wifi-Direct networking is end-of-life, so the simplest and most robust[m
+[32m+[m[32m        // (e.g.: no one can screw things up by messing with the contents of the config file) fix is[m
+[32m+[m[32m        // to do away with configuration file entirely.[m
+[32m+[m[32m        //[m
+[32m+[m[32m        // Control hubs are always running the access point model.  Everything else, for the time[m
+[32m+[m[32m        // being always runs the wifi direct model.[m
+[32m+[m[32m        if (Device.isRevControlHub() == true) {[m
+[32m+[m[32m            networkType = NetworkType.RCWIRELESSAP;[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            networkType = NetworkType.fromString(preferencesHelper.readString(context.getString(R.string.pref_pairing_kind), NetworkType.globalDefaultAsString()));[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        // update the app_settings[m
+[32m+[m[32m        preferencesHelper.writeStringPrefIfDifferent(context.getString(R.string.pref_pairing_kind), networkType.toString());[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onWindowFocusChanged(boolean hasFocus){[m
+[32m+[m[32m        super.onWindowFocusChanged(hasFocus);[m
+[32m+[m[32m        // When the window loses focus (e.g., the action overflow is shown),[m
+[32m+[m[32m        // cancel any pending hide action. When the window gains focus,[m
+[32m+[m[32m        // hide the system UI.[m
+[32m+[m[32m        if (hasFocus) {[m
+[32m+[m[32m            if (ImmersiveMode.apiOver19()){[m
+[32m+[m[32m                // Immersive flag only works on API 19 and above.[m
+[32m+[m[32m                immersion.hideSystemUI();[m
+[32m+[m[32m            }[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            immersion.cancelSystemUIHide();[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public boolean onCreateOptionsMenu(Menu menu) {[m
+[32m+[m[32m        getMenuInflater().inflate(R.menu.ftc_robot_controller, menu);[m
+[32m+[m[32m        return true;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public boolean onOptionsItemSelected(MenuItem item) {[m
+[32m+[m[32m        int id = item.getItemId();[m
+[32m+[m
+[32m+[m[32m        if (id == R.id.action_programming_mode) {[m
+[32m+[m[32m            if (cfgFileMgr.getActiveConfig().isNoConfig()) {[m
+[32m+[m[32m                // Tell the user they must configure the robot before starting programming mode.[m
+[32m+[m[32m                // TODO: as we are no longer truly 'modal' this warning should be adapted[m
+[32m+[m[32m                AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastConfigureRobotBeforeProgrammingMode));[m
+[32m+[m[32m            } else {[m
+[32m+[m[32m                Intent programmingModeIntent = new Intent(AppUtil.getDefContext(), ProgrammingModeActivity.class);[m
+[32m+[m[32m                programmingModeIntent.putExtra([m
+[32m+[m[32m                        LaunchActivityConstantsList.PROGRAMMING_MODE_ACTIVITY_PROGRAMMING_WEB_HANDLERS,[m
+[32m+[m[32m                        new LocalByRefIntentExtraHolder(programmingWebHandlers));[m
+[32m+[m[32m                startActivity(programmingModeIntent);[m
+[32m+[m[32m            }[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        } else if (id == R.id.action_program_and_manage) {[m
+[32m+[m[32m            Intent programmingModeIntent = new Intent(AppUtil.getDefContext(), ProgramAndManageActivity.class);[m
+[32m+[m[32m            RobotControllerWebInfo webInfo = programmingWebHandlers.getWebServer().getConnectionInformation();[m
+[32m+[m[32m            programmingModeIntent.putExtra(LaunchActivityConstantsList.RC_WEB_INFO, webInfo.toJson());[m
+[32m+[m[32m            startActivity(programmingModeIntent);[m
+[32m+[m[32m        } else if (id == R.id.action_inspection_mode) {[m
+[32m+[m[32m            Intent inspectionModeIntent = new Intent(AppUtil.getDefContext(), RcInspectionActivity.class);[m
+[32m+[m[32m            startActivity(inspectionModeIntent);[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_blocks) {[m
+[32m+[m[32m            Intent blocksIntent = new Intent(AppUtil.getDefContext(), BlocksActivity.class);[m
+[32m+[m[32m            startActivity(blocksIntent);[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_restart_robot) {[m
+             dimmer.handleDimTimer();[m
+[31m-          }[m
+[32m+[m[32m            AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastRestartingRobot));[m
+[32m+[m[32m            requestRobotRestart();[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_configure_robot) {[m
+[32m+[m[32m            EditParameters parameters = new EditParameters();[m
+[32m+[m[32m            Intent intentConfigure = new Intent(AppUtil.getDefContext(), FtcLoadFileActivity.class);[m
+[32m+[m[32m            parameters.putIntent(intentConfigure);[m
+[32m+[m[32m            startActivityForResult(intentConfigure, RequestCode.CONFIGURE_ROBOT_CONTROLLER.ordinal());[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_settings) {[m
+[32m+[m[32m            // historical: this once erroneously used FTC_CONFIGURE_REQUEST_CODE_ROBOT_CONTROLLER[m
+[32m+[m[32m            Intent settingsIntent = new Intent(AppUtil.getDefContext(), FtcRobotControllerSettingsActivity.class);[m
+[32m+[m[32m            startActivityForResult(settingsIntent, RequestCode.SETTINGS_ROBOT_CONTROLLER.ordinal());[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_about) {[m
+[32m+[m[32m            Intent intent = new Intent(AppUtil.getDefContext(), FtcAboutActivity.class);[m
+[32m+[m[32m            startActivity(intent);[m
+[32m+[m[32m            return true;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else if (id == R.id.action_exit_app) {[m
+[32m+[m[32m            finish();[m
+[32m+[m[32m            return true;[m
+         }[m
+[31m-      });[m
+[32m+[m
+[32m+[m[32m        return super.onOptionsItemSelected(item);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onConfigurationChanged(Configuration newConfig) {[m
+[32m+[m[32m        super.onConfigurationChanged(newConfig);[m
+[32m+[m[32m        // don't destroy assets on screen rotation[m
+[32m+[m[32m        updateMonitorLayout(newConfig);[m
+     }[m
+[31m-  }[m
+ [m
+[31m-  protected class SharedPreferencesListener implements SharedPreferences.OnSharedPreferenceChangeListener {[m
+[31m-    @Override public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {[m
+[31m-      if (key.equals(context.getString(R.string.pref_app_theme))) {[m
+[31m-        ThemedActivity.restartForAppThemeChange(getTag(), getString(R.string.appThemeChangeRestartNotifyRC));[m
+[31m-      } else if (key.equals(context.getString(R.string.pref_wifi_automute))) {[m
+[31m-        if (preferencesHelper.readBoolean(context.getString(R.string.pref_wifi_automute), false)) {[m
+[31m-          initWifiMute(true);[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Updates the orientation of monitorContainer (which contains cameraMonitorView and[m
+[32m+[m[32m     * tfodMonitorView) based on the given configuration. Makes the children split the space.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    private void updateMonitorLayout(Configuration configuration) {[m
+[32m+[m[32m        LinearLayout monitorContainer = (LinearLayout) findViewById(R.id.monitorContainer);[m
+[32m+[m[32m        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {[m
+[32m+[m[32m            // When the phone is landscape, lay out the monitor views horizontally.[m
+[32m+[m[32m            monitorContainer.setOrientation(LinearLayout.HORIZONTAL);[m
+[32m+[m[32m            for (int i = 0; i < monitorContainer.getChildCount(); i++) {[m
+[32m+[m[32m                View view = monitorContainer.getChildAt(i);[m
+[32m+[m[32m                view.setLayoutParams(new LayoutParams(0, LayoutParams.MATCH_PARENT, 1 /* weight */));[m
+[32m+[m[32m            }[m
+         } else {[m
+[31m-          initWifiMute(false);[m
+[32m+[m[32m            // When the phone is portrait, lay out the monitor views vertically.[m
+[32m+[m[32m            monitorContainer.setOrientation(LinearLayout.VERTICAL);[m
+[32m+[m[32m            for (int i = 0; i < monitorContainer.getChildCount(); i++) {[m
+[32m+[m[32m                View view = monitorContainer.getChildAt(i);[m
+[32m+[m[32m                view.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1 /* weight */));[m
+[32m+[m[32m            }[m
+         }[m
+[31m-      }[m
+[32m+[m[32m        monitorContainer.requestLayout();[m
+     }[m
+[31m-  }[m
+ [m
+[31m-  protected void initWifiMute(boolean enable) {[m
+[31m-    if (enable) {[m
+[31m-      wifiMuteStateMachine = new WifiMuteStateMachine();[m
+[31m-      wifiMuteStateMachine.initialize();[m
+[31m-      wifiMuteStateMachine.start();[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    protected void onActivityResult(int request, int result, Intent intent) {[m
+[32m+[m[32m        if (request == REQUEST_CONFIG_WIFI_CHANNEL) {[m
+[32m+[m[32m            if (result == RESULT_OK) {[m
+[32m+[m[32m                AppUtil.getInstance().showToast(UILocation.BOTH, context, context.getString(R.string.toastWifiConfigurationComplete));[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m        // was some historical confusion about launch codes here, so we err safely[m
+[32m+[m[32m        if (request == RequestCode.CONFIGURE_ROBOT_CONTROLLER.ordinal() || request == RequestCode.SETTINGS_ROBOT_CONTROLLER.ordinal()) {[m
+[32m+[m[32m            // We always do a refresh, whether it was a cancel or an OK, for robustness[m
+[32m+[m[32m            cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+ [m
+[31m-      motionDetection = new MotionDetection(2.0, 10);[m
+[31m-      motionDetection.startListening();[m
+[31m-      motionDetection.registerListener(new MotionDetection.MotionDetectionListener() {[m
+[31m-        @Override[m
+[31m-        public void onMotionDetected(double vector)[m
+[31m-        {[m
+[31m-          wifiMuteStateMachine.consumeEvent(WifiMuteEvent.USER_ACTIVITY);[m
+[31m-        }[m
+[31m-      });[m
+[31m-    } else {[m
+[31m-      wifiMuteStateMachine.stop();[m
+[31m-      wifiMuteStateMachine = null;[m
+[31m-      motionDetection.stopListening();[m
+[31m-      motionDetection.purgeListeners();[m
+[31m-      motionDetection = null;[m
+[31m-    }[m
+[31m-  }[m
+[31m-[m
+[31m-  @Override[m
+[31m-  public void onUserInteraction() {[m
+[31m-    if (wifiMuteStateMachine != null) {[m
+[31m-      wifiMuteStateMachine.consumeEvent(WifiMuteEvent.USER_ACTIVITY);[m
+[31m-    }[m
+[31m-  }[m
+[31m-}[m
+[32m+[m[32m    public void onServiceBind(final FtcRobotControllerService service) {[m
+[32m+[m[32m        RobotLog.vv(FtcRobotControllerService.TAG, "%s.controllerService=bound", TAG);[m
+[32m+[m[32m        controllerService = service;[m
+[32m+[m[32m        updateUI.setControllerService(controllerService);[m
+[32m+[m
+[32m+[m[32m        updateUIAndRequestRobotSetup();[m
+[32m+[m[32m        programmingWebHandlers.setState(new FtcRobotControllerServiceState() {[m
+[32m+[m[32m            @NonNull[m
+[32m+[m[32m            @Override[m
+[32m+[m[32m            public WebServer getWebServer() {[m
+[32m+[m[32m                return service.getWebServer();[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            @Override[m
+[32m+[m[32m            public EventLoopManager getEventLoopManager() {[m
+[32m+[m[32m                return service.getRobot().eventLoopManager;[m
+[32m+[m[32m            }[m
+[32m+[m[32m        });[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private void updateUIAndRequestRobotSetup() {[m
+[32m+[m[32m        if (controllerService != null) {[m
+[32m+[m[32m            callback.networkConnectionUpdate(controllerService.getNetworkConnectionStatus());[m
+[32m+[m[32m            callback.updateRobotStatus(controllerService.getRobotStatus());[m
+[32m+[m[32m            // Only show this first-time toast on headless systems: what we have now on non-headless suffices[m
+[32m+[m[32m            requestRobotSetup(LynxConstants.isRevControlHub()[m
+[32m+[m[32m                    ? new Runnable() {[m
+[32m+[m[32m                @Override public void run() {[m
+[32m+[m[32m                    showRestartRobotCompleteToast(R.string.toastRobotSetupComplete);[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m                    : null);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private void requestRobotSetup(@Nullable Runnable runOnComplete) {[m
+[32m+[m[32m        if (controllerService == null) return;[m
+[32m+[m
+[32m+[m[32m        RobotConfigFile file = cfgFileMgr.getActiveConfigAndUpdateUI();[m
+[32m+[m[32m        HardwareFactory hardwareFactory = new HardwareFactory(context);[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            hardwareFactory.setXmlPullParser(file.getXml());[m
+[32m+[m[32m        } catch (Resources.NotFoundException e) {[m
+[32m+[m[32m            file = RobotConfigFile.noConfig(cfgFileMgr);[m
+[32m+[m[32m            hardwareFactory.setXmlPullParser(file.getXml());[m
+[32m+[m[32m            cfgFileMgr.setActiveConfigAndUpdateUI(false, file);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        OpModeRegister userOpModeRegister = createOpModeRegister();[m
+[32m+[m[32m        eventLoop = new FtcEventLoop(hardwareFactory, userOpModeRegister, callback, this, programmingModeController);[m
+[32m+[m[32m        FtcEventLoopIdle idleLoop = new FtcEventLoopIdle(hardwareFactory, userOpModeRegister, callback, this, programmingModeController);[m
+[32m+[m
+[32m+[m[32m        controllerService.setCallback(callback);[m
+[32m+[m[32m        controllerService.setupRobot(eventLoop, idleLoop, runOnComplete);[m
+[32m+[m
+[32m+[m[32m        passReceivedUsbAttachmentsToEventLoop();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected OpModeRegister createOpModeRegister() {[m
+[32m+[m[32m        return new FtcOpModeRegister();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private void shutdownRobot() {[m
+[32m+[m[32m        if (controllerService != null) controllerService.shutdownRobot();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private void requestRobotRestart() {[m
+[32m+[m[32m        AppUtil.getInstance().showToast(UILocation.BOTH, AppUtil.getDefContext().getString(R.string.toastRestartingRobot));[m
+[32m+[m[32m        //[m
+[32m+[m[32m        RobotLog.clearGlobalErrorMsg();[m
+[32m+[m[32m        RobotLog.clearGlobalWarningMsg();[m
+[32m+[m[32m        shutdownRobot();[m
+[32m+[m[32m        requestRobotSetup(new Runnable() {[m
+[32m+[m[32m            @Override public void run() {[m
+[32m+[m[32m                showRestartRobotCompleteToast(R.string.toastRestartRobotComplete);[m
+[32m+[m[32m            }[m
+[32m+[m[32m        });[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    private void showRestartRobotCompleteToast(@StringRes int resid) {[m
+[32m+[m[32m        AppUtil.getInstance().showToast(UILocation.BOTH, AppUtil.getDefContext().getString(resid));[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void hittingMenuButtonBrightensScreen() {[m
+[32m+[m[32m        ActionBar actionBar = getActionBar();[m
+[32m+[m[32m        if (actionBar != null) {[m
+[32m+[m[32m            actionBar.addOnMenuVisibilityListener(new ActionBar.OnMenuVisibilityListener() {[m
+[32m+[m[32m                @Override[m
+[32m+[m[32m                public void onMenuVisibilityChanged(boolean isVisible) {[m
+[32m+[m[32m                    if (isVisible) {[m
+[32m+[m[32m                        dimmer.handleDimTimer();[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                }[m
+[32m+[m[32m            });[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected class SharedPreferencesListener implements SharedPreferences.OnSharedPreferenceChangeListener {[m
+[32m+[m[32m        @Override public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {[m
+[32m+[m[32m            if (key.equals(context.getString(R.string.pref_app_theme))) {[m
+[32m+[m[32m                ThemedActivity.restartForAppThemeChange(getTag(), getString(R.string.appThemeChangeRestartNotifyRC));[m
+[32m+[m[32m            } else if (key.equals(context.getString(R.string.pref_wifi_automute))) {[m
+[32m+[m[32m                if (preferencesHelper.readBoolean(context.getString(R.string.pref_wifi_automute), false)) {[m
+[32m+[m[32m                    initWifiMute(true);[m
+[32m+[m[32m                } else {[m
+[32m+[m[32m                    initWifiMute(false);[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    protected void initWifiMute(boolean enable) {[m
+[32m+[m[32m        if (enable) {[m
+[32m+[m[32m            wifiMuteStateMachine = new WifiMuteStateMachine();[m
+[32m+[m[32m            wifiMuteStateMachine.initialize();[m
+[32m+[m[32m            wifiMuteStateMachine.start();[m
+[32m+[m
+[32m+[m[32m            motionDetection = new MotionDetection(2.0, 10);[m
+[32m+[m[32m            motionDetection.startListening();[m
+[32m+[m[32m            motionDetection.registerListener(new MotionDetection.MotionDetectionListener() {[m
+[32m+[m[32m                @Override[m
+[32m+[m[32m                public void onMotionDetected(double vector)[m
+[32m+[m[32m                {[m
+[32m+[m[32m                    wifiMuteStateMachine.consumeEvent(WifiMuteEvent.USER_ACTIVITY);[m
+[32m+[m[32m                }[m
+[32m+[m[32m            });[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            wifiMuteStateMachine.stop();[m
+[32m+[m[32m            wifiMuteStateMachine = null;[m
+[32m+[m[32m            motionDetection.stopListening();[m
+[32m+[m[32m            motionDetection.purgeListeners();[m
+[32m+[m[32m            motionDetection = null;[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @Override[m
+[32m+[m[32m    public void onUserInteraction() {[m
+[32m+[m[32m        if (wifiMuteStateMachine != null) {[m
+[32m+[m[32m            wifiMuteStateMachine.consumeEvent(WifiMuteEvent.USER_ACTIVITY);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/FtcRobotController/src/main/res/layout/activity_ftc_controller.xml b/FtcRobotController/src/main/res/layout/activity_ftc_controller.xml[m
+[1mindex c74e2de..d38786b 100644[m
+[1m--- a/FtcRobotController/src/main/res/layout/activity_ftc_controller.xml[m
+[1m+++ b/FtcRobotController/src/main/res/layout/activity_ftc_controller.xml[m
+[36m@@ -32,14 +32,14 @@[m [mOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.[m
+ -->[m
+ [m
+ <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"[m
+[31m-              xmlns:tools="http://schemas.android.com/tools"[m
+[31m-              android:layout_width="match_parent"[m
+[31m-              android:layout_height="match_parent"[m
+[31m-              xmlns:style="http://schemas.android.com/apk/res-auto"[m
+[31m-              tools:context="org.firstinspires.ftc.robotcontroller.internal.FtcRobotControllerActivity"[m
+[31m-              android:focusable="true"[m
+[31m-              android:id="@+id/entire_screen"[m
+[31m-              android:orientation="vertical">[m
+[32m+[m[32m    xmlns:tools="http://schemas.android.com/tools"[m
+[32m+[m[32m    android:layout_width="match_parent"[m
+[32m+[m[32m    android:layout_height="match_parent"[m
+[32m+[m[32m    xmlns:style="http://schemas.android.com/apk/res-auto"[m
+[32m+[m[32m    tools:context="org.firstinspires.ftc.robotcontroller.internal.FtcRobotControllerActivity"[m
+[32m+[m[32m    android:focusable="true"[m
+[32m+[m[32m    android:id="@+id/entire_screen"[m
+[32m+[m[32m    android:orientation="vertical">[m
+ [m
+   <!-- black bar on top -->[m
+   <RelativeLayout[m
+[36m@@ -193,6 +193,36 @@[m [mOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.[m
+       android:visibility="invisible"[m
+       android:text="" />[m
+ [m
+[32m+[m[32m    <FrameLayout[m
+[32m+[m[32m        android:layout_width="fill_parent"[m
+[32m+[m[32m        android:layout_height="350dp"[m
+[32m+[m[32m        android:layout_alignParentBottom="true"[m
+[32m+[m[32m        android:layout_alignParentLeft="true"[m
+[32m+[m[32m        android:id="@+id/frameLayout">[m
+[32m+[m[32m      <SurfaceView[m
+[32m+[m[32m          android:layout_width="fill_parent"[m
+[32m+[m[32m          android:layout_height="fill_parent"[m
+[32m+[m[32m          android:visibility="visible"[m
+[32m+[m[32m          android:id="@+id/camera_surface_view" />[m
+[32m+[m
+[32m+[m[32m      <Button[m
+[32m+[m[32m          android:layout_width="wrap_content"[m
+[32m+[m[32m          android:layout_height="wrap_content"[m
+[32m+[m[32m          android:text="Webcam"[m
+[32m+[m[32m          android:id="@+id/camera_button"[m
+[32m+[m[32m          android:layout_gravity="end|bottom" />[m
+[32m+[m
+[32m+[m[32m      <TextView[m
+[32m+[m[32m          android:layout_width="wrap_content"[m
+[32m+[m[32m          android:layout_height="wrap_content"[m
+[32m+[m[32m          android:textAppearance="?android:attr/textAppearanceSmall"[m
+[32m+[m[32m          android:text="[RESULT]"[m
+[32m+[m[32m          android:id="@+id/resultText"[m
+[32m+[m[32m          android:layout_gravity="end|top"[m
+[32m+[m[32m          android:textColor="#ff0000" />[m
+[32m+[m
+[32m+[m[32m    </FrameLayout>[m
+[32m+[m
+   </RelativeLayout>[m
+ [m
+   <WebView[m
+[1mdiff --git a/FtcRobotController/src/main/res/xml/device_filter.xml b/FtcRobotController/src/main/res/xml/device_filter.xml[m
+[1mindex 7677dad..7292c9c 100644[m
+[1m--- a/FtcRobotController/src/main/res/xml/device_filter.xml[m
+[1m+++ b/FtcRobotController/src/main/res/xml/device_filter.xml[m
+[36m@@ -36,15 +36,20 @@[m [mhttps://developer.android.com/guide/topics/connectivity/usb/host[m
+ -->[m
+ [m
+ <!-- see also RobotUsbDevice.getUsbIdentifiers() -->[m
+[31m-<resources>[m
+[31m-   <usb-device vendor-id="1027" product-id="24577" /> <!-- FT232 Modern Robotics: 0x0403/0x6001 -->[m
+[31m-   <usb-device vendor-id="1027" product-id="24597" /> <!-- FT232 Lynx: 0x0403/0x6015 -->[m
+[31m-[m
+[31m-   <!-- cameras -->[m
+[31m-   <!-- We don't currently auto-connect to UVC cameras, instead relying[m
+[31m-        on the app itself to poll. But we could change that if we wished -->[m
+[31m-   <!-- Update: turns out we need that if we are to get onNewIntent() notifications[m
+[31m-        in our activity when cameras attach. See FtcRobotControllerActivity. -->[m
+[31m-   <usb-device class="14" subclass="2"/>[m
+[31m-[m
+[31m-</resources>[m
+[32m+[m[32m<!--<resources>-->[m
+[32m+[m[32m   <!--<usb-device vendor-id="1027" product-id="24577" /> &lt;!&ndash; FT232 Modern Robotics: 0x0403/0x6001 &ndash;&gt;-->[m
+[32m+[m[32m   <!--<usb-device vendor-id="1027" product-id="24597" /> &lt;!&ndash; FT232 Lynx: 0x0403/0x6015 &ndash;&gt;-->[m
+[32m+[m
+[32m+[m[32m   <!--&lt;!&ndash; cameras &ndash;&gt;-->[m
+[32m+[m[32m   <!--&lt;!&ndash; We don't currently auto-connect to UVC cameras, instead relying-->[m
+[32m+[m[32m        <!--on the app itself to poll. But we could change that if we wished &ndash;&gt;-->[m
+[32m+[m[32m   <!--&lt;!&ndash; Update: turns out we need that if we are to get onNewIntent() notifications-->[m
+[32m+[m[32m        <!--in our activity when cameras attach. See FtcRobotControllerActivity. &ndash;&gt;-->[m
+[32m+[m[32m<!--</resources>-->[m
+[32m+[m
+[32m+[m[32m<usb>[m
+[32m+[m[32m   <!--<usb-device vendor-id="1027" product-id="24577" /> &lt;!&ndash; FT232 Modern Robotics: 0x0403/0x6001 &ndash;&gt;-->[m
+[32m+[m[32m   <!--<usb-device vendor-id="1027" product-id="24597" /> &lt;!&ndash; FT232 Lynx: 0x0403/0x6015 &ndash;&gt;-->[m
+[32m+[m
+[32m+[m[32m   <usb-device class="239" subclass="2" />	<!-- all device of UVC -->[m
+[32m+[m[32m</usb>[m
+\ No newline at end of file[m
+[1mdiff --git a/build.common.gradle b/build.common.gradle[m
+[1mindex 50b7a0e..def53f3 100644[m
+[1m--- a/build.common.gradle[m
+[1m+++ b/build.common.gradle[m
+[36m@@ -21,7 +21,7 @@[m [mapply plugin: 'com.android.application'[m
+ [m
+ android {[m
+ [m
+[31m-    compileSdkVersion 23[m
+[32m+[m[32m    compileSdkVersion 27[m
+ [m
+     signingConfigs {[m
+         debug {[m
+[36m@@ -39,7 +39,7 @@[m [mandroid {[m
+     defaultConfig {[m
+         applicationId 'com.qualcomm.ftcrobotcontroller'[m
+         minSdkVersion 19[m
+[31m-        targetSdkVersion 19[m
+[32m+[m[32m        targetSdkVersion 27[m
+ [m
+         /**[m
+          * We keep the versionCode and versionName of robot controller applications in sync with[m
+[36m@@ -91,8 +91,8 @@[m [mandroid {[m
+     }[m
+ [m
+     compileOptions {[m
+[31m-        sourceCompatibility JavaVersion.VERSION_1_7[m
+[31m-        targetCompatibility JavaVersion.VERSION_1_7[m
+[32m+[m[32m        sourceCompatibility JavaVersion.VERSION_1_8[m
+[32m+[m[32m        targetCompatibility JavaVersion.VERSION_1_8[m
+     }[m
+ [m
+     sourceSets.main {[m
+[1mdiff --git a/build.gradle b/build.gradle[m
+[1mindex e13ce16..af5f31d 100644[m
+[1m--- a/build.gradle[m
+[1m+++ b/build.gradle[m
+[36m@@ -19,5 +19,10 @@[m [mallprojects {[m
+     repositories {[m
+         google()[m
+         jcenter()[m
+[32m+[m[32m        maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }[m
+     }[m
+ }[m
+[32m+[m
+[32m+[m[32mext {[m
+[32m+[m[32m    commonLibVersion= '2.12.4'[m
+[32m+[m[32m}[m
+[1mdiff --git a/libuvccamera-debug/build.gradle b/libuvccamera-debug/build.gradle[m
+[1mnew file mode 100644[m
+[1mindex 0000000..002120f[m
+[1m--- /dev/null[m
+[1m+++ b/libuvccamera-debug/build.gradle[m
+[36m@@ -0,0 +1,2 @@[m
+[32m+[m[32mconfigurations.maybeCreate("default")[m
+[32m+[m[32martifacts.add("default", file('libuvccamera-debug.aar'))[m
+\ No newline at end of file[m
+[1mdiff --git a/libuvccamera-debug/libuvccamera-debug.aar b/libuvccamera-debug/libuvccamera-debug.aar[m
+[1mnew file mode 100644[m
+[1mindex 0000000..c4d9817[m
+Binary files /dev/null and b/libuvccamera-debug/libuvccamera-debug.aar differ
+[1mdiff --git a/libuvccamera-debug/source/main/res/xml/device_filter.xml b/libuvccamera-debug/source/main/res/xml/device_filter.xml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..da573ff[m
+[1m--- /dev/null[m
+[1m+++ b/libuvccamera-debug/source/main/res/xml/device_filter.xml[m
+[36m@@ -0,0 +1,28 @@[m
+[32m+[m[32m<?xml version="1.0" encoding="utf-8"?>[m
+[32m+[m
+[32m+[m[32m<!--[m
+[32m+[m[32m  ~  UVCCamera[m
+[32m+[m[32m  ~  library and sample to access to UVC web camera on non-rooted Android device[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~ Copyright (c) 2014-2017 saki t_saki@serenegiant.com[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~  Licensed under the Apache License, Version 2.0 (the "License");[m
+[32m+[m[32m  ~  you may not use this file except in compliance with the License.[m
+[32m+[m[32m  ~   You may obtain a copy of the License at[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~      http://www.apache.org/licenses/LICENSE-2.0[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~   Unless required by applicable law or agreed to in writing, software[m
+[32m+[m[32m  ~   distributed under the License is distributed on an "AS IS" BASIS,[m
+[32m+[m[32m  ~   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.[m
+[32m+[m[32m  ~   See the License for the specific language governing permissions and[m
+[32m+[m[32m  ~   limitations under the License.[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~  All files in the folder are under this Apache License, Version 2.0.[m
+[32m+[m[32m  ~  Files in the libjpeg-turbo, libusb, libuvc, rapidjson folder[m
+[32m+[m[32m  ~  may have a different license, see the respective files.[m
+[32m+[m[32m  -->[m
+[32m+[m
+[32m+[m[32m<usb>[m
+[32m+[m	[32m<usb-device class="239" subclass="2" />	<!-- all device of UVC -->[m
+[32m+[m[32m</usb>[m
+[1mdiff --git a/settings.gradle b/settings.gradle[m
+[1mindex 9e2cfb3..a0ddc3b 100644[m
+[1m--- a/settings.gradle[m
+[1m+++ b/settings.gradle[m
+[36m@@ -1,2 +1,2 @@[m
+[31m-include ':FtcRobotController'[m
+[32m+[m[32minclude ':FtcRobotController', ':usbCameraCommon-debug', ':libuvccamera-debug'[m
+ include ':TeamCode'[m
+[1mdiff --git a/usbCameraCommon-debug/build.gradle b/usbCameraCommon-debug/build.gradle[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f57dd22[m
+[1m--- /dev/null[m
+[1m+++ b/usbCameraCommon-debug/build.gradle[m
+[36m@@ -0,0 +1,26 @@[m
+[32m+[m[32mconfigurations.maybeCreate("default")[m
+[32m+[m[32martifacts.add("default", file('usbCameraCommon-debug.aar'))[m
+[32m+[m
+[32m+[m[32mapply plugin: 'com.android.library'[m
+[32m+[m
+[32m+[m[32mandroid {[m
+[32m+[m
+[32m+[m[32m    defaultConfig {[m
+[32m+[m[32m        minSdkVersion 19[m
+[32m+[m[32m        targetSdkVersion 27[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    compileSdkVersion 27[m
+[32m+[m
+[32m+[m[32m    compileOptions {[m
+[32m+[m[32m        sourceCompatibility JavaVersion.VERSION_1_8[m
+[32m+[m[32m        targetCompatibility JavaVersion.VERSION_1_8[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mdependencies {[m
+[32m+[m[32m    implementation("com.serenegiant:common:${commonLibVersion}") {[m
+[32m+[m[32m        exclude module: 'support-v4'[m
+[32m+[m[32m        exclude module: 'support-annotations'[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/usbCameraCommon-debug/src/main/AndroidManifest.xml b/usbCameraCommon-debug/src/main/AndroidManifest.xml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..67c59ea[m
+[1m--- /dev/null[m
+[1m+++ b/usbCameraCommon-debug/src/main/AndroidManifest.xml[m
+[36m@@ -0,0 +1,24 @@[m
+[32m+[m[32m<!--[m
+[32m+[m[32m  ~  UVCCamera[m
+[32m+[m[32m  ~  library and sample to access to UVC web camera on non-rooted Android device[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~ Copyright (c) 2014-2017 saki t_saki@serenegiant.com[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~  Licensed under the Apache License, Version 2.0 (the "License");[m
+[32m+[m[32m  ~  you may not use this file except in compliance with the License.[m
+[32m+[m[32m  ~   You may obtain a copy of the License at[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~      http://www.apache.org/licenses/LICENSE-2.0[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~   Unless required by applicable law or agreed to in writing, software[m
+[32m+[m[32m  ~   distributed under the License is distributed on an "AS IS" BASIS,[m
+[32m+[m[32m  ~   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.[m
+[32m+[m[32m  ~   See the License for the specific language governing permissions and[m
+[32m+[m[32m  ~   limitations under the License.[m
+[32m+[m[32m  ~[m
+[32m+[m[32m  ~  All files in the folder are under this Apache License, Version 2.0.[m
+[32m+[m[32m  ~  Files in the libjpeg-turbo, libusb, libuvc, rapidjson folder[m
+[32m+[m[32m  ~  may have a different license, see the respective files.[m
+[32m+[m[32m  -->[m
+[32m+[m
+[32m+[m[32m<manifest package="com.serenegiant.usbcameracommon"/>[m
+[1mdiff --git a/usbCameraCommon-debug/usbCameraCommon-debug.aar b/usbCameraCommon-debug/usbCameraCommon-debug.aar[m
+[1mnew file mode 100644[m
+[1mindex 0000000..ac6099c[m
+Binary files /dev/null and b/usbCameraCommon-debug/usbCameraCommon-debug.aar differ
