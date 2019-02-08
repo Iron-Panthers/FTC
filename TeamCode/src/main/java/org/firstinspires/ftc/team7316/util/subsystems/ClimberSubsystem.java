@@ -20,7 +20,7 @@ public class ClimberSubsystem extends Subsystem {
         return new TeleopClimb();
     }
     public void setMotor(double power){
-        Hardware.instance.climbmotor.setPower(power);
+        Hardware.instance.climbmotor.setPower(-power);
     }
 
     public long currentPosition() {

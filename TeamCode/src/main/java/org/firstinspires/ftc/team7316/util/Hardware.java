@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.team7316.util.motorwrappers.DCMotorWrapper;
@@ -26,9 +27,9 @@ public class Hardware {
     public DcMotor rightmotor;
     public DcMotor centermotor;
     public DcMotor climbmotor;
-    public DcMotor intakemotor;
     public Servo plateServo;
     public BNO055IMU imu;
+    public TouchSensor climberLimit;
 
     public DCMotorWrapper leftmotorWrapper;
     public DCMotorWrapper rightmotorWrapper;
@@ -41,8 +42,8 @@ public class Hardware {
     public final String centerMotorName = "cmotor";
     public final String climbMotorName = "clmotor";
     public final String plateServoName = "bservo";
-    public final String intakeMotorName = "imotor";
     public final String imuname = "gyro";
+    public final String climberLimitName = "clswitch";
 
     /**
      * Initialize all the hardware fields here
@@ -52,22 +53,20 @@ public class Hardware {
         rightmotor= map.dcMotor.get(rightMotorName);
         centermotor=map.dcMotor.get(centerMotorName);
         climbmotor=map.dcMotor.get(climbMotorName);
-        intakemotor=map.dcMotor.get(intakeMotorName);
 
         leftmotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightmotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         centermotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         climbmotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftmotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        intakemotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         leftmotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightmotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         centermotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         climbmotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        intakemotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         plateServo=map.servo.get(plateServoName);
+        climberLimit=map.touchSensor.get(climberLimitName);
         BNO055IMU.Parameters gyroParams = new BNO055IMU.Parameters();
         gyroParams.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
         gyroParams.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;

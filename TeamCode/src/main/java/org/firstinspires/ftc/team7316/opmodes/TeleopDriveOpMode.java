@@ -7,6 +7,7 @@ import org.firstinspires.ftc.team7316.util.GyroAngles;
 import org.firstinspires.ftc.team7316.util.Hardware;
 import org.firstinspires.ftc.team7316.util.input.OI;
 import org.firstinspires.ftc.team7316.util.modes.TeleopBaseOpMode;
+import org.firstinspires.ftc.team7316.util.subsystems.Subsystems;
 
 @TeleOp(name="Teleop")
 public class TeleopDriveOpMode extends TeleopBaseOpMode {
@@ -46,7 +47,7 @@ public class TeleopDriveOpMode extends TeleopBaseOpMode {
 //        Hardware.log("ticks left", Hardware.instance.leftmotor.getCurrentPosition());
 //        Hardware.log("ticks calc", Constants.degreesToTicks(360));
 
-        Hardware.log("enc", Hardware.instance.climbmotor.getCurrentPosition());
+        Hardware.log("enc", Subsystems.instance.climberSubsystem.currentPosition());
 
 
     }

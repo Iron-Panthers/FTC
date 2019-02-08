@@ -18,7 +18,7 @@ public class TurnTowardsCheddar extends Command {
     public void init() {
         Moments M = Imgproc.moments(CameraUntilCheddar.contour);
         pixelPos = M.m10 / M.m00;
-        angleWanted = (int) Constants.pixelsToDegrees(pixelPos);
+        angleWanted = (int) -Constants.pixelsToDegrees(pixelPos);
         turn = new TurnGyroSimple(angleWanted);
         turn.thresh = 3;
 

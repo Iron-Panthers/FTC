@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.team7316.util.subsystems;
 
+import org.firstinspires.ftc.team7316.commands.TeleopServo;
 import org.firstinspires.ftc.team7316.util.Hardware;
 import org.firstinspires.ftc.team7316.util.commands.Command;
 
@@ -13,14 +14,17 @@ public class PlateSubsystem extends Subsystem {
         return null;
     }
     public void servoLower(){
-        Hardware.instance.plateServo.setPosition(0.6);
+        Hardware.instance.plateServo.setPosition(1);
     }
     public void servoRaise(){
-        Hardware.instance.plateServo.setPosition(0);
+        Hardware.instance.plateServo.setPosition(-1);
+    }
+    public void servoSet(double position){
+        Hardware.instance.plateServo.setPosition(position);
     }
 
     @Override
     public Command defaultTeleopCommand() {
-        return null;
+        return new TeleopServo();
     }
 }
