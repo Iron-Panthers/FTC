@@ -46,7 +46,7 @@ public class TeleopDriveOpMode extends TeleopBaseOpMode {
 //        Hardware.log("ticks left", Hardware.instance.leftmotor.getCurrentPosition());
 //        Hardware.log("ticks calc", Constants.degreesToTicks(360));
 
-        Hardware.log("enc", Hardware.instance.climbmotor.getCurrentPosition());
+        Hardware.log("enc", Hardware.instance.climbmotor1.getCurrentPosition());
 
 
     }

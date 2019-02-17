@@ -16,7 +16,6 @@ public class TeleopTray extends Command {
     @Override
     public void loop() {
         if(Math.abs(OI.instance.gp2.right_stick.getY())> Math.abs(Constants.TRAY_DEADZONE)){
-            Subsystems.instance.traySubsystem.extendTray();
             Subsystems.instance.traySubsystem.setTrayAngle(OI.instance.gp2.right_stick.getY());
         }
         else {

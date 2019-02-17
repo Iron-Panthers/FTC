@@ -7,7 +7,8 @@ import org.firstinspires.ftc.team7316.util.commands.Command;
 public class ClimberSubsystem extends Subsystem {
     @Override
     public void reset() {
-        Hardware.instance.climbmotor.setPower(0);
+        Hardware.instance.climbmotor1.setPower(0);
+        Hardware.instance.climbmotor2.setPower(0);
     }
 
     @Override
@@ -20,10 +21,12 @@ public class ClimberSubsystem extends Subsystem {
         return new TeleopClimb();
     }
     public void setMotor(double power){
-        Hardware.instance.climbmotor.setPower(power);
+        Hardware.instance.climbmotor1.setPower(power);
+        Hardware.instance.climbmotor2.setPower(power);
     }
 
     public long currentPosition() {
-        return Hardware.instance.climbmotor.getCurrentPosition();
+        return Hardware.instance.climbmotor1.getCurrentPosition();
     }
+
 }
