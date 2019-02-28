@@ -13,6 +13,7 @@ import org.firstinspires.ftc.team7316.util.Hardware;
 import org.firstinspires.ftc.team7316.util.Scheduler;
 import org.firstinspires.ftc.team7316.util.commands.AutoCodes;
 import org.firstinspires.ftc.team7316.util.modes.AutoBaseOpMode;
+import org.firstinspires.ftc.team7316.util.subsystems.Subsystems;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
 
@@ -35,22 +36,22 @@ public class DriveAutoTest extends AutoBaseOpMode {
     @Override
     public void onInit() {
 //        Scheduler.instance.add(new TurnGyroSimple(90));
-        Scheduler.instance.add(AutoCodes.blueDoubleCheddarSequence());
-        Hardware.instance.gyroWrapper.resetHeading(Hardware.instance.gyroWrapper.angles().yaw);
-        timer.reset();
-        timer2.reset();
-
-        runningAverage1 = 0;
-        runningAverage2 = 0;
-
-        ticksLeft = Hardware.instance.leftmotor.getCurrentPosition();
-        ticksRight = Hardware.instance.rightmotor.getCurrentPosition();
-
+//        Scheduler.instance.add(AutoCodes.blueDoubleCheddarSequence());
+//        Hardware.instance.gyroWrapper.resetHeading(Hardware.instance.gyroWrapper.angles().yaw);
+//        timer.reset();
+//        timer2.reset();
+//
+//        runningAverage1 = 0;
+//        runningAverage2 = 0;
+//
+//        ticksLeft = Hardware.instance.leftmotor.getCurrentPosition();
+//        ticksRight = Hardware.instance.rightmotor.getCurrentPosition();
+        Subsystems.instance.driveSubsystem.driveMotorSet(-1,-1);
     }
 
     @Override
     public void onLoop() {
-//        testCamera();
+        testDriveF();
     }
 
     private void testTurnF() {
@@ -89,10 +90,10 @@ public class DriveAutoTest extends AutoBaseOpMode {
         timer.reset();
         count++;
 
-        Hardware.instance.rightmotor.setPower(0.9 * power);
-        Hardware.instance.leftmotor.setPower(power);
+        Hardware.instance.rightmotor.setPower(-power);
+        Hardware.instance.leftmotor.setPower(-power);
 
-        Hardware.log("right power", 0.9 * power);
+        Hardware.log("right power",  power);
         Hardware.log("left power", power);
 
         Hardware.log("left ticks", Hardware.instance.leftmotor.getCurrentPosition());
@@ -101,7 +102,7 @@ public class DriveAutoTest extends AutoBaseOpMode {
         if (timer2.seconds() > 3) {
             Log.d("used power left", String.valueOf(power));
             Log.d("real speed left", String.valueOf(runningAverage1 / count));
-            Log.d("used power right", String.valueOf(0.9 * power));
+            Log.d("used power right", String.valueOf( power));
             Log.d("real speed right", String.valueOf(runningAverage2 / count));
             runningAverage1 = 0;
             runningAverage2 = 0;

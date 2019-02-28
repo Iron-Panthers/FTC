@@ -10,7 +10,7 @@ import org.firstinspires.ftc.team7316.util.modes.AutoBaseOpMode;
 public class TestTurnRight extends AutoBaseOpMode {
     @Override
     public void onInit() {
-        Scheduler.instance.add(new TurnGyroSimple(90));
+        Scheduler.instance.add(new TurnGyroSimple(45));
     }
 
     @Override

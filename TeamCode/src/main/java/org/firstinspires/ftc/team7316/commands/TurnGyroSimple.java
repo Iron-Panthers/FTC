@@ -90,7 +90,7 @@ public class TurnGyroSimple extends Command {
 
     @Override
     public boolean shouldRemove() {
-        return timer.seconds() > 3 || (Math.abs(this.deltaHeading - angles.heading) < this.thresh && Math.abs(Hardware.instance.imu.getAngularVelocity().yRotationRate) < 0.5);
+        return timer.seconds() > 4.5 || (Math.abs(this.deltaHeading - angles.heading) < this.thresh && Math.abs(Hardware.instance.imu.getAngularVelocity().yRotationRate) < 0.5);
     }
 
     @Override

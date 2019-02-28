@@ -22,6 +22,9 @@ public class TeleopIntakeExtend extends Command {
         else if(OI.instance.gp2.leftTriggerWrapper.pressedState()){
             Subsystems.instance.intakeExtendSubsystem.ExtendMotorSet(-.5);
         }
+        else {
+            Subsystems.instance.intakeExtendSubsystem.ExtendMotorSet(0);
+        }
     }
 
     @Override
