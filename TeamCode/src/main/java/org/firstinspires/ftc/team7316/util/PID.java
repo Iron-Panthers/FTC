@@ -137,7 +137,7 @@ public class PID {
         Hardware.log("delta", delta);
 
         out = p * error + i * sum + d * delta + predSpeed /  f_m;
-        out += Math.signum(out) * f_b / f_m;
+        out += Math.signum(out) * f_b / f_m*2;
 
         double speed = (sensorChange) / dtime;
         dataPoints.add(new String[]{String.valueOf(timer.seconds()),

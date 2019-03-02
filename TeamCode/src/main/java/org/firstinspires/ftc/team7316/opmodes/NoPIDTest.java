@@ -18,8 +18,8 @@ public class NoPIDTest extends AutoBaseOpMode {
 
     @Override
     public void onLoop() {
-        Hardware.instance.leftmotor.setPower(.7/Constants.DRIVE_M_LEFT+(Math.signum(-.7/ Constants.DRIVE_M_LEFT) * Constants.DRIVE_M_LEFT / Constants.DRIVE_B_LEFT));
-        Hardware.instance.leftmotor.setPower(.7/Constants.DRIVE_M_RIGHT+(Math.signum(-.7/ Constants.DRIVE_M_RIGHT) * Constants.DRIVE_M_RIGHT / Constants.DRIVE_B_RIGHT));
+        Hardware.instance.leftmotor.setPower((-.7/Constants.DRIVE_M_LEFT)+(-1 * (Constants.DRIVE_B_LEFT/ Constants.DRIVE_M_LEFT )));
+        Hardware.instance.leftmotor.setPower((-.7/Constants.DRIVE_M_RIGHT)+(-1 * (Constants.DRIVE_B_RIGHT/ Constants.DRIVE_M_RIGHT)));
 
     }
 

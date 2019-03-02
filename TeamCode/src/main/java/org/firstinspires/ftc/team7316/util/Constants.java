@@ -27,13 +27,13 @@ public class Constants {
     public static final int DISTANCE_ERROR_RANGE_TICKS = 10;
     public static final double ACCELERATION_SPEED = 0.2;
 
-    public static final double DRIVE_P =0.0025;
+    public static final double DRIVE_P =0.00;
     public static final double DRIVE_I = 0;//0.00005;
     public static final double DRIVE_D = 0;
     public static final double DRIVE_M_LEFT = 4065.36;
-    public static final double DRIVE_B_LEFT = 718.136;
-    public static final double DRIVE_M_RIGHT = 2633.27;
-    public static final double DRIVE_B_RIGHT = 456.909;
+    public static final double DRIVE_B_LEFT = 718;
+    public static final double DRIVE_M_RIGHT = 2542.36;
+    public static final double DRIVE_B_RIGHT = 429;
 
     private static final double ROBOT_RADIUS = 7; // inches
     public static final double TURN_P_LEFT = 0.072;

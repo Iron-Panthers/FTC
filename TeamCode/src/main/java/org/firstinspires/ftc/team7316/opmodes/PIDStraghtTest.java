@@ -13,7 +13,7 @@ import org.firstinspires.ftc.team7316.util.modes.AutoBaseOpMode;
 public class PIDStraghtTest extends AutoBaseOpMode {
     @Override
     public void onInit() {
-        Scheduler.instance.add(new DriveDistance(Constants.inchesToTicks(-36)));
+        Scheduler.instance.add(new DriveDistance(Constants.inchesToTicks(-12)));
     }
 
     @Override

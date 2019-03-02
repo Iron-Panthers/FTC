@@ -57,7 +57,8 @@ public class DriveDistance extends Command {
 
     @Override
     public boolean shouldRemove() {
-        return Subsystems.instance.driveSubsystem.checkMotorsFinished() || t.seconds() > pathTime + 10;
+        return  false;
+        //return Subsystems.instance.driveSubsystem.checkMotorsFinished() || t.seconds() > pathTime + 10;
     }
 
     @Override
