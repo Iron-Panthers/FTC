@@ -12,6 +12,12 @@ public class TeleopPlateServo extends Command {
 
     @Override
     public void loop() {
+        if (OI.instance.gp2.right_bumper.pressedState()) {
+            Subsystems.instance.plateSubsystem.servoRaise();
+        }
+        if (OI.instance.gp2.left_bumper.pressedState()) {
+            Subsystems.instance.plateSubsystem.servoLower();
+        }
     }
     public boolean shouldRemove() {
         return false;

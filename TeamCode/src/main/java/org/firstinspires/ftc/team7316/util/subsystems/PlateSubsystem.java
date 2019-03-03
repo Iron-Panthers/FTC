@@ -22,6 +22,6 @@ public class PlateSubsystem extends Subsystem {
 
     @Override
     public Command defaultTeleopCommand() {
-        return null;
+        return new TeleopPlateServo();
     }
 }
